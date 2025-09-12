@@ -1,29 +1,44 @@
 import express, { type Request, Response, NextFunction } from "express";
 import session from "express-session";
 import ConnectPgSimple from "connect-pg-simple";
+import pg from "pg";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { db } from "./db";
 
 const app = express();
+
+// Enable trust proxy for TLS-terminated proxies
+app.set('trust proxy', 1);
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-// Session management setup
+// Session management setup with standard pg pool
+const { Pool } = pg;
+const sessionPool = new Pool({ connectionString: process.env.DATABASE_URL });
 const PgSession = ConnectPgSimple(session);
 app.use(session({
   store: new PgSession({
-    pool: db as any, // Type assertion for Drizzle compatibility
+    pool: sessionPool, // Use standard pg pool for session storage
     tableName: 'session',
     createTableIfMissing: true,
   }),
-  secret: process.env.SESSION_SECRET || 'your-secret-key-change-in-production',
+  secret: (() => {
+    const secret = process.env.SESSION_SECRET;
+    if (!secret) {
+      console.error('CRITICAL: SESSION_SECRET environment variable is required for security');
+      process.exit(1);
+    }
+    return secret;
+  })(),
   resave: false,
   saveUninitialized: false,
   cookie: {
     secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
     maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    sameSite: 'lax', // CSRF protection
   },
 }));
 

@@ -105,7 +105,7 @@ export default function LoginForm({ onLogin, isLoading = false, error }: LoginFo
           
           <div className="mt-6 pt-4 border-t text-center">
             <p className="text-xs text-muted-foreground">
-              Demo credentials: admin / password
+              Demo credentials: admin / admin123!
             </p>
           </div>
         </CardContent>

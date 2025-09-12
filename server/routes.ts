@@ -12,15 +12,46 @@ import {
 import multer, { type FileFilterCallback, type Multer } from "multer";
 import { z } from "zod";
 
-// Extended Request interface for session support
+// Simple in-memory rate limiter for login attempts
+const loginAttempts = new Map<string, { count: number; resetTime: number }>();
+const RATE_LIMIT_WINDOW = 15 * 60 * 1000; // 15 minutes
+const MAX_LOGIN_ATTEMPTS = 5;
+
+// CSRF protection middleware for state-changing requests
+const requireCSRFToken = (req: Request, res: Response, next: NextFunction) => {
+  // Skip CSRF check for GET, HEAD, OPTIONS requests
+  if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
+    return next();
+  }
+
+  // Check for X-Requested-With header (common CSRF protection)
+  const requestedWith = req.headers['x-requested-with'];
+  if (requestedWith !== 'XMLHttpRequest') {
+    return res.status(403).json({
+      error: 'Missing required security header for state-changing requests',
+      code: 'CSRF_PROTECTION',
+      hint: 'Include X-Requested-With: XMLHttpRequest header'
+    });
+  }
+
+  next();
+};
+
+// Extend Express session data
+declare module 'express-session' {
+  interface SessionData {
+    userId?: string;
+    user?: Omit<User, 'password'>;
+  }
+}
+
+// Type for authenticated requests
 interface AuthenticatedRequest extends Request {
   session: {
     userId?: string;
-    user?: User;
-    save: (callback?: (err?: any) => void) => void;
-    destroy: (callback?: (err?: any) => void) => void;
-  };
-  file?: Express.Multer.File;
+    user?: Omit<User, 'password'>;
+  } & Express.Session;
+  document?: any; // Store document for authorized requests
 }
 
 // Validation schemas for updates to prevent mass assignment
@@ -71,8 +102,32 @@ const fileUploadSchema = z.object({
   docType: z.string().min(1, "Document type is required").max(100),
 });
 
+// Rate limiting middleware for login endpoint
+const rateLimitLogin = (req: Request, res: Response, next: NextFunction) => {
+  const clientIP = req.ip || req.connection.remoteAddress || 'unknown';
+  const now = Date.now();
+  
+  const attempts = loginAttempts.get(clientIP);
+  
+  if (attempts) {
+    if (now > attempts.resetTime) {
+      // Reset window expired, clear attempts
+      loginAttempts.delete(clientIP);
+    } else if (attempts.count >= MAX_LOGIN_ATTEMPTS) {
+      const timeRemaining = Math.ceil((attempts.resetTime - now) / 1000 / 60);
+      return res.status(429).json({
+        error: `Too many login attempts. Please try again in ${timeRemaining} minutes.`,
+        code: 'RATE_LIMITED',
+        retryAfter: attempts.resetTime
+      });
+    }
+  }
+  
+  next();
+};
+
 // Authentication middleware
-const requireAuth = (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+const requireAuth = (req: Request, res: Response, next: NextFunction) => {
   if (!req.session.userId || !req.session.user) {
     return res.status(401).json({ 
       error: 'Authentication required',
@@ -83,7 +138,7 @@ const requireAuth = (req: AuthenticatedRequest, res: Response, next: NextFunctio
 };
 
 // Admin role middleware
-const requireAdmin = (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+const requireAdmin = (req: Request, res: Response, next: NextFunction) => {
   if (!req.session.user || req.session.user.role !== 'admin') {
     return res.status(403).json({ 
       error: 'Admin access required',
@@ -92,6 +147,56 @@ const requireAdmin = (req: AuthenticatedRequest, res: Response, next: NextFuncti
   }
   next();
 };
+
+// Document ownership/authorization middleware
+const authorizeDocumentAccess = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const documentId = req.params.id;
+    if (!documentId) {
+      return res.status(400).json({ 
+        error: 'Document ID required',
+        code: 'MISSING_DOCUMENT_ID' 
+      });
+    }
+
+    // Validate UUID format
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(documentId)) {
+      return res.status(400).json({ 
+        error: 'Invalid document ID format',
+        code: 'INVALID_DOCUMENT_ID' 
+      });
+    }
+
+    // Verify document exists and user has access
+    const document = await storage.getDocument(documentId);
+    if (!document) {
+      return res.status(404).json({ 
+        error: 'Document not found',
+        code: 'NOT_FOUND' 
+      });
+    }
+
+    // Admin users have access to all documents
+    if (req.session.user?.role === 'admin') {
+      req.document = document; // Store document in request for later use
+      return next();
+    }
+
+    // For future user roles, add appropriate authorization logic here
+    return res.status(403).json({ 
+      error: 'Insufficient permissions to access this document',
+      code: 'ACCESS_DENIED' 
+    });
+  } catch (error) {
+    console.error('Document authorization error:', error);
+    return res.status(500).json({ 
+      error: 'Authorization check failed',
+      code: 'AUTHORIZATION_ERROR' 
+    });
+  }
+};
+
 
 // Error handler utility
 const handleDatabaseError = (error: any, res: Response, operation: string) => {
@@ -202,7 +307,7 @@ const upload = multer({
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Authentication routes (public)
-  app.post('/api/auth/login', async (req: AuthenticatedRequest, res) => {
+  app.post('/api/auth/login', rateLimitLogin, requireCSRFToken, async (req: Request, res) => {
     try {
       const { username, password } = loginSchema.parse(req.body);
       
@@ -216,20 +321,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const isValidPassword = await bcrypt.compare(password, user.password);
       if (!isValidPassword) {
+        // Track failed login attempt
+        const clientIP = req.ip || req.connection.remoteAddress || 'unknown';
+        const now = Date.now();
+        const attempts = loginAttempts.get(clientIP) || { count: 0, resetTime: now + RATE_LIMIT_WINDOW };
+        attempts.count++;
+        if (attempts.count === 1) {
+          attempts.resetTime = now + RATE_LIMIT_WINDOW;
+        }
+        loginAttempts.set(clientIP, attempts);
+        
         return res.status(401).json({ 
           error: 'Invalid credentials',
           code: 'INVALID_CREDENTIALS' 
         });
       }
       
-      // Store user in session
-      req.session.userId = user.id;
-      req.session.user = {
-        id: user.id,
-        username: user.username,
-        role: user.role,
-        createdAt: user.createdAt
-      };
+      // Clear any failed login attempts on successful login
+      const clientIP = req.ip || req.connection.remoteAddress || 'unknown';
+      loginAttempts.delete(clientIP);
+      
+      // Regenerate session to prevent session fixation attacks
+      req.session.regenerate((err) => {
+        if (err) {
+          console.error('Session regeneration error:', err);
+          return res.status(500).json({ 
+            error: 'Session creation failed',
+            code: 'SESSION_ERROR' 
+          });
+        }
+        
+        // Store user in session (exclude password)
+        req.session.userId = user.id;
+        req.session.user = {
+          id: user.id,
+          username: user.username,
+          role: user.role,
+          createdAt: user.createdAt
+        };
       
       req.session.save((err) => {
         if (err) {
@@ -250,6 +379,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       });
       
+      }); // Close the req.session.regenerate callback
+      
     } catch (error) {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ 
@@ -266,7 +397,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/auth/logout', requireAuth, async (req: AuthenticatedRequest, res) => {
+  app.post('/api/auth/logout', requireAuth, requireCSRFToken, async (req: Request, res) => {
     req.session.destroy((err) => {
       if (err) {
         console.error('Session destroy error:', err);
@@ -279,7 +410,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
-  app.get('/api/auth/me', requireAuth, async (req: AuthenticatedRequest, res) => {
+  app.get('/api/auth/me', requireAuth, async (req: Request, res) => {
     res.json({
       user: {
         id: req.session.user!.id,
@@ -322,7 +453,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/customers', requireAuth, requireAdmin, async (req, res) => {
+  app.post('/api/customers', requireAuth, requireCSRFToken, requireAdmin, async (req, res) => {
     try {
       const validatedData = insertCustomerSchema.parse(req.body);
       const customer = await storage.createCustomer(validatedData);
@@ -339,7 +470,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put('/api/customers/:id', requireAuth, requireAdmin, async (req, res) => {
+  app.put('/api/customers/:id', requireAuth, requireCSRFToken, requireAdmin, async (req, res) => {
     try {
       validateParams(uuidParamSchema, req.params);
       const validatedData = updateCustomerSchema.parse(req.body);
@@ -367,7 +498,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/customers/:id', requireAuth, requireAdmin, async (req, res) => {
+  app.delete('/api/customers/:id', requireAuth, requireCSRFToken, requireAdmin, async (req, res) => {
     try {
       validateParams(uuidParamSchema, req.params);
       
@@ -418,30 +549,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/documents/:id', requireAuth, async (req, res) => {
+  app.get('/api/documents/:id', requireAuth, authorizeDocumentAccess, async (req: AuthenticatedRequest, res) => {
     try {
-      validateParams(uuidParamSchema, req.params);
-      const document = await storage.getDocument(req.params.id);
-      if (!document) {
-        return res.status(404).json({ 
-          error: 'Document not found',
-          code: 'NOT_FOUND' 
-        });
-      }
-      res.json(document);
+      // Document is already validated and stored in req.document by authorizeDocumentAccess
+      res.json(req.document);
     } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ 
-          error: 'Invalid document ID format', 
-          details: error.errors,
-          code: 'VALIDATION_ERROR'
-        });
-      }
       return handleDatabaseError(error, res, 'fetch document');
     }
   });
 
-  app.post('/api/documents/upload', requireAuth, upload.single('file'), async (req: AuthenticatedRequest, res) => {
+  app.post('/api/documents/upload', requireAuth, requireCSRFToken, upload.single('file'), async (req: AuthenticatedRequest, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ 
@@ -515,29 +632,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/documents/:id', requireAuth, async (req, res) => {
+  app.delete('/api/documents/:id', requireAuth, requireCSRFToken, authorizeDocumentAccess, async (req: AuthenticatedRequest, res) => {
     try {
-      validateParams(uuidParamSchema, req.params);
-      
-      // Check if document exists first
-      const existingDocument = await storage.getDocument(req.params.id);
-      if (!existingDocument) {
-        return res.status(404).json({ 
-          error: 'Document not found',
-          code: 'NOT_FOUND' 
-        });
-      }
-      
+      // Document existence and authorization already verified by authorizeDocumentAccess
       await storage.deleteDocument(req.params.id);
       res.status(204).send();
     } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ 
-          error: 'Invalid document ID format', 
-          details: error.errors,
-          code: 'VALIDATION_ERROR'
-        });
-      }
       return handleDatabaseError(error, res, 'delete document');
     }
   });
@@ -589,7 +689,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/test-cases', requireAuth, async (req, res) => {
+  app.post('/api/test-cases', requireAuth, requireCSRFToken, async (req, res) => {
     try {
       const validatedData = insertTestCaseSchema.parse(req.body);
       
@@ -618,7 +718,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put('/api/test-cases/:id', requireAuth, async (req, res) => {
+  app.put('/api/test-cases/:id', requireAuth, requireCSRFToken, async (req, res) => {
     try {
       validateParams(uuidParamSchema, req.params);
       const validatedData = updateTestCaseSchema.parse(req.body);
@@ -646,7 +746,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/test-cases/:id', requireAuth, async (req, res) => {
+  app.delete('/api/test-cases/:id', requireAuth, requireCSRFToken, async (req, res) => {
     try {
       validateParams(uuidParamSchema, req.params);
       
@@ -721,18 +821,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Generate test cases from document (protected)
-  app.post('/api/documents/:id/generate-tests', requireAuth, async (req, res) => {
+  app.post('/api/documents/:id/generate-tests', requireAuth, requireCSRFToken, authorizeDocumentAccess, async (req: AuthenticatedRequest, res) => {
     try {
-      validateParams(uuidParamSchema, req.params);
       const documentId = req.params.id;
-      const document = await storage.getDocument(documentId);
-      
-      if (!document) {
-        return res.status(404).json({ 
-          error: 'Document not found',
-          code: 'NOT_FOUND' 
-        });
-      }
+      const document = req.document; // Already validated by authorizeDocumentAccess
 
       // Create a processing job for test generation
       const job = await storage.createProcessingJob({
