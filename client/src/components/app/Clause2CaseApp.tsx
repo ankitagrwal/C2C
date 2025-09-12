@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Switch, Route } from "wouter";
 import LoginForm from "../auth/LoginForm";
 import MainLayout from "../layout/MainLayout";
@@ -16,6 +16,15 @@ interface User {
   role: string;
 }
 
+interface SessionData {
+  user: User;
+  expires: number;
+}
+
+// Session management constants
+const SESSION_KEY = 'clause2case_session';
+const SESSION_DURATION = 60 * 60 * 1000; // 1 hour in milliseconds
+
 // Mock authentication for demo //todo: remove mock functionality
 const DEMO_CREDENTIALS = {
   username: 'admin',
@@ -26,6 +35,36 @@ export default function Clause2CaseApp() {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [loginError, setLoginError] = useState<string>('');
+  const [isCheckingSession, setIsCheckingSession] = useState(true);
+
+  // Check for existing session on component mount
+  useEffect(() => {
+    const checkSession = () => {
+      try {
+        const sessionData = localStorage.getItem(SESSION_KEY);
+        if (sessionData) {
+          const parsed: SessionData = JSON.parse(sessionData);
+          const now = Date.now();
+          
+          if (parsed.expires > now) {
+            // Valid session found
+            setUser(parsed.user);
+            console.log('Session restored for user:', parsed.user.username);
+          } else {
+            // Expired session
+            localStorage.removeItem(SESSION_KEY);
+            console.log('Session expired, removed from storage');
+          }
+        }
+      } catch (error) {
+        console.error('Error checking session:', error);
+        localStorage.removeItem(SESSION_KEY);
+      }
+      setIsCheckingSession(false);
+    };
+
+    checkSession();
+  }, []);
 
   const handleLogin = async (credentials: LoginFormData) => {
     setIsLoading(true);
@@ -39,11 +78,20 @@ export default function Clause2CaseApp() {
     // Demo authentication logic //todo: remove mock functionality
     if (credentials.username === DEMO_CREDENTIALS.username && 
         credentials.password === DEMO_CREDENTIALS.password) {
-      setUser({
+      const userData: User = {
         username: credentials.username,
         role: 'administrator'
-      });
-      console.log('Login successful');
+      };
+      
+      // Store session in localStorage with expiration
+      const sessionData: SessionData = {
+        user: userData,
+        expires: Date.now() + SESSION_DURATION
+      };
+      
+      localStorage.setItem(SESSION_KEY, JSON.stringify(sessionData));
+      setUser(userData);
+      console.log('Login successful, session stored with 1-hour expiration');
     } else {
       setLoginError('Invalid credentials. Use admin/password for demo.');
       console.log('Login failed: Invalid credentials');
@@ -54,9 +102,22 @@ export default function Clause2CaseApp() {
 
   const handleLogout = () => {
     console.log('User logged out');
+    localStorage.removeItem(SESSION_KEY);
     setUser(null);
     setLoginError('');
   };
+
+  // Show loading while checking session
+  if (isCheckingSession) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-center space-y-4">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+          <p className="text-sm text-muted-foreground">Checking session...</p>
+        </div>
+      </div>
+    );
+  }
 
   // Show login form if not authenticated
   if (!user) {

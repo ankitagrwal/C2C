@@ -3,164 +3,126 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { AlertCircle, CheckCircle, Settings, Plug, Plus, Edit } from "lucide-react";
+import { 
+  CheckCircle, 
+  AlertCircle, 
+  Activity, 
+  ExternalLink, 
+  Settings, 
+  FileText, 
+  Filter,
+  Search,
+  Shield,
+  Navigation,
+  FileCheck
+} from "lucide-react";
 
-// Mock internal tools data //todo: remove mock functionality
-const mockInternalTools = [
+// Internal custom systems //todo: integrate with actual system APIs
+const internalSystems = [
   {
-    id: 'salesforce-crm',
-    name: 'Salesforce CRM',
-    toolType: 'crm',
-    apiEndpoint: 'https://mock-sf-api.com/v1',
-    authType: 'oauth',
-    isActive: true,
-    status: 'connected',
-    customersCount: 8,
-    lastSync: '2024-09-10T10:00:00Z',
-    configFields: {
-      client_id: 'mock_sf_client_id',
-      instance_url: 'https://company.salesforce.com'
-    }
+    id: 'pmap',
+    name: 'PMAP',
+    fullName: 'Policy Management and Assessment Platform',
+    description: 'Comprehensive platform for managing policies, procedures, and compliance requirements across all customer environments',
+    status: 'active',
+    lastUsed: '2024-09-12T05:30:00Z',
+    usageCount: 324,
+    category: 'policy',
+    endpoint: 'https://pmap.internal.company.com',
+    version: '2.4.1',
+    capabilities: [
+      'Policy document management',
+      'Compliance tracking', 
+      'Risk assessment',
+      'Audit trail generation'
+    ],
+    icon: Shield
   },
   {
-    id: 'sap-erp',
-    name: 'SAP Enterprise',
-    toolType: 'erp',
-    apiEndpoint: 'https://mock-sap-api.com/v2',
-    authType: 'api_key',
-    isActive: true,
-    status: 'connected',
-    customersCount: 5,
-    lastSync: '2024-09-10T11:15:00Z',
-    configFields: {
-      environment: 'production',
-      region: 'us-east-1'
-    }
+    id: 'navigator',
+    name: 'Navigator',
+    fullName: 'System Navigation and Integration Hub',
+    description: 'Centralized navigation system that provides unified access to all internal tools and customer-specific configurations',
+    status: 'active',
+    lastUsed: '2024-09-12T06:15:00Z',
+    usageCount: 198,
+    category: 'navigation',
+    endpoint: 'https://navigator.internal.company.com',
+    version: '3.1.0',
+    capabilities: [
+      'Unified system access',
+      'Customer environment routing',
+      'Permission management',
+      'Activity monitoring'
+    ],
+    icon: Navigation
   },
   {
-    id: 'custom-portal',
-    name: 'Internal HR Portal',
-    toolType: 'custom',
-    apiEndpoint: 'https://mock-hr-portal.com/api',
-    authType: 'basic_auth',
-    isActive: false,
-    status: 'disconnected',
-    customersCount: 2,
-    lastSync: '2024-09-08T08:45:00Z',
-    configFields: {
-      username: 'admin_user',
-      department_code: 'HR_001'
-    }
+    id: 'validator',
+    name: 'Validator',
+    fullName: 'Document and Data Validation Engine',
+    description: 'Advanced validation engine that ensures data integrity, format compliance, and business rule adherence across all systems',
+    status: 'active',
+    lastUsed: '2024-09-12T05:45:00Z',
+    usageCount: 456,
+    category: 'validation',
+    endpoint: 'https://validator.internal.company.com',
+    version: '1.8.2',
+    capabilities: [
+      'Document format validation',
+      'Business rule checking',
+      'Data integrity verification',
+      'Compliance validation'
+    ],
+    icon: FileCheck
   }
 ];
 
-interface ConfigureToolDialogProps {
-  tool: typeof mockInternalTools[0];
-  onSave: (toolId: string, config: any) => void;
-}
-
-function ConfigureToolDialog({ tool, onSave }: ConfigureToolDialogProps) {
-  const [config, setConfig] = useState(tool.configFields);
-
-  const handleSave = () => {
-    console.log(`Configuring tool ${tool.name}:`, config);
-    onSave(tool.id, config);
-  };
-
-  return (
-    <DialogContent className="max-w-md">
-      <DialogHeader>
-        <DialogTitle>Configure {tool.name}</DialogTitle>
-        <DialogDescription>
-          Update connection settings for {tool.toolType.toUpperCase()} integration
-        </DialogDescription>
-      </DialogHeader>
-      
-      <div className="space-y-4">
-        <div>
-          <Label htmlFor="endpoint">API Endpoint</Label>
-          <Input
-            id="endpoint"
-            value={tool.apiEndpoint}
-            readOnly
-            className="bg-muted"
-            data-testid="input-endpoint"
-          />
-        </div>
-        
-        <div>
-          <Label htmlFor="auth-type">Authentication Type</Label>
-          <Select value={tool.authType} disabled>
-            <SelectTrigger data-testid="select-auth-type">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="oauth">OAuth 2.0</SelectItem>
-              <SelectItem value="api_key">API Key</SelectItem>
-              <SelectItem value="basic_auth">Basic Auth</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        
-        {Object.entries(config).map(([key, value]) => (
-          <div key={key}>
-            <Label htmlFor={key} className="capitalize">
-              {key.replace('_', ' ')}
-            </Label>
-            <Input
-              id={key}
-              value={value as string}
-              onChange={(e) => setConfig(prev => ({ ...prev, [key]: e.target.value }))}
-              type={key.includes('password') || key.includes('secret') ? 'password' : 'text'}
-              data-testid={`input-${key}`}
-            />
-          </div>
-        ))}
-        
-        <div className="flex justify-end space-x-2">
-          <Button variant="outline" onClick={() => console.log('Test connection')}>Test Connection</Button>
-          <Button onClick={handleSave} data-testid="button-save-config">Save Configuration</Button>
-        </div>
-      </div>
-    </DialogContent>
-  );
-}
+const categories = ['All Categories', 'policy', 'navigation', 'validation'];
+const statuses = ['All Statuses', 'active', 'maintenance', 'inactive'];
 
 export default function InternalToolsManager() {
-  const [tools, setTools] = useState(mockInternalTools);
+  const [tools, setTools] = useState(internalSystems);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('All Categories');
+  const [selectedStatus, setSelectedStatus] = useState('All Statuses');
 
-  const handleConfigureTool = (toolId: string, config: any) => {
-    console.log('Tool configured:', toolId, config);
-    setTools(prev => prev.map(tool => 
-      tool.id === toolId 
-        ? { ...tool, configFields: config, status: 'connected', isActive: true }
-        : tool
-    ));
-  };
-
-  const toggleToolStatus = (toolId: string) => {
-    setTools(prev => prev.map(tool => 
-      tool.id === toolId 
-        ? { ...tool, isActive: !tool.isActive, status: tool.isActive ? 'disconnected' : 'connected' }
-        : tool
-    ));
-    console.log('Tool status toggled:', toolId);
-  };
+  const filteredTools = tools.filter(tool => {
+    const matchesSearch = tool.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         tool.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         tool.description.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCategory = selectedCategory === 'All Categories' || tool.category === selectedCategory;
+    const matchesStatus = selectedStatus === 'All Statuses' || tool.status === selectedStatus;
+    
+    return matchesSearch && matchesCategory && matchesStatus;
+  });
 
   const getStatusIcon = (status: string) => {
-    return status === 'connected' 
-      ? <CheckCircle className="h-4 w-4 text-green-600" />
-      : <AlertCircle className="h-4 w-4 text-red-600" />;
+    switch (status) {
+      case 'active':
+        return <CheckCircle className="h-4 w-4 text-green-600" />;
+      case 'maintenance':
+        return <AlertCircle className="h-4 w-4 text-yellow-600" />;
+      case 'inactive':
+        return <AlertCircle className="h-4 w-4 text-red-600" />;
+      default:
+        return <AlertCircle className="h-4 w-4 text-gray-600" />;
+    }
   };
 
-  const getStatusBadge = (tool: typeof mockInternalTools[0]) => {
-    if (tool.status === 'connected' && tool.isActive) {
-      return <Badge variant="default" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">Connected</Badge>;
-    }
-    return <Badge variant="secondary">Disconnected</Badge>;
+  const getStatusBadge = (status: string) => {
+    const colors: { [key: string]: string } = {
+      'active': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+      'maintenance': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
+      'inactive': 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+    };
+    
+    return (
+      <Badge variant="secondary" className={colors[status]}>
+        {status.charAt(0).toUpperCase() + status.slice(1)}
+      </Badge>
+    );
   };
 
   return (
@@ -169,113 +131,217 @@ export default function InternalToolsManager() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-semibold">Internal Tools</h1>
-          <p className="text-muted-foreground">Configure integrations with CRM, ERP, and custom systems</p>
+          <p className="text-muted-foreground">Access and manage internal custom systems: PMAP, Navigator, and Validator</p>
         </div>
-        <Button variant="outline" data-testid="button-add-tool">
-          <Plus className="mr-2 h-4 w-4" />
-          Add Integration
-        </Button>
+        <Badge variant="secondary">
+          {tools.filter(t => t.status === 'active').length} systems online
+        </Badge>
       </div>
 
-      {/* Tools Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {tools.map((tool) => (
-          <Card key={tool.id} className="hover-elevate">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <div className="bg-primary/10 p-2 rounded-lg">
-                    <Plug className="h-5 w-5 text-primary" />
-                  </div>
-                  <div>
-                    <CardTitle className="text-lg">{tool.name}</CardTitle>
-                    <CardDescription className="uppercase text-xs font-medium">
-                      {tool.toolType}
-                    </CardDescription>
-                  </div>
-                </div>
-                {getStatusIcon(tool.status)}
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Status</span>
-                {getStatusBadge(tool)}
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Customers</span>
-                <span className="font-medium" data-testid={`customer-count-${tool.id}`}>
-                  {tool.customersCount}
-                </span>
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Auth Type</span>
-                <Badge variant="outline" className="text-xs">
-                  {tool.authType.replace('_', ' ')}
-                </Badge>
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Last Sync</span>
-                <span className="text-xs text-muted-foreground">
-                  {new Date(tool.lastSync).toLocaleDateString()}
-                </span>
-              </div>
-              
-              <div className="flex space-x-2">
-                <Dialog>
-                  <DialogTrigger asChild>
-                    <Button variant="outline" size="sm" className="flex-1" data-testid={`button-configure-${tool.id}`}>
-                      <Settings className="mr-2 h-3 w-3" />
-                      Configure
-                    </Button>
-                  </DialogTrigger>
-                  <ConfigureToolDialog tool={tool} onSave={handleConfigureTool} />
-                </Dialog>
-                
-                <Button
-                  variant={tool.isActive ? "secondary" : "default"}
-                  size="sm"
-                  className="flex-1"
-                  onClick={() => toggleToolStatus(tool.id)}
-                  data-testid={`button-toggle-${tool.id}`}
-                >
-                  {tool.isActive ? 'Disconnect' : 'Connect'}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+      {/* System Status Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Active Systems</CardTitle>
+            <CheckCircle className="h-4 w-4 text-green-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold" data-testid="stat-active-systems">
+              {tools.filter(t => t.status === 'active').length}
+            </div>
+            <p className="text-xs text-muted-foreground">internal systems online</p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Operations</CardTitle>
+            <Activity className="h-4 w-4 text-blue-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold" data-testid="stat-total-operations">
+              {tools.reduce((acc, tool) => acc + tool.usageCount, 0)}
+            </div>
+            <p className="text-xs text-muted-foreground">processed today</p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">System Reliability</CardTitle>
+            <AlertCircle className="h-4 w-4 text-green-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-600" data-testid="stat-system-reliability">
+              99.2%
+            </div>
+            <p className="text-xs text-muted-foreground">uptime this quarter</p>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Summary Card */}
+      {/* Filters */}
       <Card>
         <CardHeader>
-          <CardTitle>Integration Summary</CardTitle>
-          <CardDescription>Overview of all configured internal tools</CardDescription>
+          <CardTitle className="flex items-center space-x-2">
+            <Filter className="h-5 w-5" />
+            <span>Filter Systems</span>
+          </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-primary">
-                {tools.filter(t => t.isActive).length}
-              </div>
-              <p className="text-sm text-muted-foreground">Active Integrations</p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search systems..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10"
+                data-testid="input-search"
+              />
             </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold">
-                {tools.reduce((sum, t) => sum + t.customersCount, 0)}
-              </div>
-              <p className="text-sm text-muted-foreground">Total Customers</p>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-green-600">
-                {tools.filter(t => t.status === 'connected').length}/{tools.length}
-              </div>
-              <p className="text-sm text-muted-foreground">Connection Health</p>
-            </div>
+            
+            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+              <SelectTrigger data-testid="select-filter-category">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {categories.map((category) => (
+                  <SelectItem key={category} value={category}>{category}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            
+            <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+              <SelectTrigger data-testid="select-filter-status">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {statuses.map((status) => (
+                  <SelectItem key={status} value={status}>{status}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <div className="flex items-center justify-between mt-4">
+            <span className="text-sm text-muted-foreground">
+              Showing {filteredTools.length} of {tools.length} systems
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setSearchQuery('');
+                setSelectedCategory('All Categories');
+                setSelectedStatus('All Statuses');
+              }}
+              data-testid="button-clear-filters"
+            >
+              Clear Filters
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Internal Systems List */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Internal Systems</CardTitle>
+          <CardDescription>Access and monitor core internal systems: PMAP, Navigator, and Validator</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-6">
+            {filteredTools.map((tool) => {
+              const IconComponent = tool.icon;
+              return (
+                <div key={tool.id} className="border rounded-lg p-6 hover-elevate">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex items-start space-x-4 flex-1">
+                      <div className="bg-primary/10 p-3 rounded-lg">
+                        <IconComponent className="h-6 w-6 text-primary" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-2 mb-2">
+                          <Badge variant="outline" className="text-xs capitalize">
+                            {tool.category}
+                          </Badge>
+                          {getStatusBadge(tool.status)}
+                          <span className="text-xs text-muted-foreground">
+                            v{tool.version}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            {tool.usageCount} operations
+                          </span>
+                        </div>
+                        <h3 className="font-semibold text-xl mb-1">{tool.name}</h3>
+                        <p className="text-sm font-medium text-muted-foreground mb-1">{tool.fullName}</p>
+                        <p className="text-sm text-muted-foreground mb-3">{tool.description}</p>
+                        
+                        <div className="mb-4">
+                          <p className="text-xs font-medium text-muted-foreground mb-2">Key Capabilities:</p>
+                          <div className="flex flex-wrap gap-1">
+                            {tool.capabilities.map((capability, index) => (
+                              <Badge key={index} variant="secondary" className="text-xs">
+                                {capability}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center space-x-2">
+                      {getStatusIcon(tool.status)}
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <Button 
+                        size="sm" 
+                        onClick={() => {
+                          console.log(`Accessing ${tool.name} at ${tool.endpoint}`);
+                          // In a real implementation, this would open the system
+                          alert(`Opening ${tool.fullName}\\nEndpoint: ${tool.endpoint}`);
+                        }}
+                        data-testid={`button-access-${tool.id}`}
+                      >
+                        <ExternalLink className="mr-2 h-3 w-3" />
+                        Access {tool.name}
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => {
+                          console.log(`Configuring ${tool.name}`);
+                          alert(`Configuration panel for ${tool.fullName} will be available in the next version.`);
+                        }}
+                        data-testid={`button-config-${tool.id}`}
+                      >
+                        <Settings className="mr-2 h-3 w-3" />
+                        Configure
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => {
+                          console.log(`Viewing logs for ${tool.name}`);
+                          alert(`System logs for ${tool.fullName}:\\n\\n✓ All services operational\\n✓ Last health check: ${new Date(tool.lastUsed).toLocaleString()}\\n✓ No errors in the last 24 hours`);
+                        }}
+                        data-testid={`button-logs-${tool.id}`}
+                      >
+                        <FileText className="mr-2 h-3 w-3" />
+                        System Logs
+                      </Button>
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      Last used: {new Date(tool.lastUsed).toLocaleString()}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </CardContent>
       </Card>
