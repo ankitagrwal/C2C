@@ -1,0 +1,1 @@
+import DashboardOverview from '../dashboard/DashboardOverview';\n\nexport default function DashboardOverviewExample() {\n  return (\n    <div className=\"p-6 max-w-7xl\">\n      <DashboardOverview />\n    </div>\n  );\n}\n

@@ -1,0 +1,1 @@
+import LoginForm from '../auth/LoginForm';\n\nexport default function LoginFormExample() {\n  const handleLogin = (credentials: any) => {\n    console.log('Login submitted:', credentials);\n  };\n\n  return (\n    <LoginForm \n      onLogin={handleLogin} \n      isLoading={false}\n    />\n  );\n}\n

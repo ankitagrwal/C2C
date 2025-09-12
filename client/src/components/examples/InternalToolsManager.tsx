@@ -1,0 +1,1 @@
+import InternalToolsManager from '../tools/InternalToolsManager';\n\nexport default function InternalToolsManagerExample() {\n  return (\n    <div className=\"p-6 max-w-7xl\">\n      <InternalToolsManager />\n    </div>\n  );\n}\n

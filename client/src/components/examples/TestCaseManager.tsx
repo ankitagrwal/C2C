@@ -1,0 +1,1 @@
+import TestCaseManager from '../testcases/TestCaseManager';\n\nexport default function TestCaseManagerExample() {\n  return (\n    <div className=\"p-6 max-w-7xl\">\n      <TestCaseManager />\n    </div>\n  );\n}\n

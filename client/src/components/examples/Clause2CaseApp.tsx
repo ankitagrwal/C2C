@@ -1,0 +1,1 @@
+import Clause2CaseApp from '../app/Clause2CaseApp';\nimport { ThemeProvider } from '../theme/ThemeProvider';\n\nexport default function Clause2CaseAppExample() {\n  return (\n    <ThemeProvider defaultTheme=\"dark\" storageKey=\"clause2case-theme\">\n      <Clause2CaseApp />\n    </ThemeProvider>\n  );\n}\n
