@@ -1,0 +1,138 @@
+# AI Test Case Generation Platform - Revised Plan for Replit
+
+## Project Overview
+Enterprise AI-powered test case generation platform with RAG integration for 2-day MVP development.
+
+---
+
+## Core Features Required
+
+### ✅ **Authentication & Access**
+- Admin authentication system with role-based access control
+- Secure login/register functionality
+
+### ✅ **Internal Tools Configuration**  
+- Internal tools configuration dashboard with mock integrations
+- **3 Mock Tools**: Salesforce CRM, SAP Enterprise, Internal HR Portal
+- Connection status indicators and configuration forms
+- Dummy API integration (no real connections needed)
+
+### ✅ **Customer Management**
+- Customer management with solution_id import from configured tools
+- Solution_id as unique identifier across all internal tools
+- Customer configuration status (configured/not configured boolean)
+- Import customers from selected internal tools using mock data
+
+### ✅ **Document Processing**
+- Document upload and ingestion system
+- **Supported Formats**: .pdf, .doc/.docx, .txt only
+- Document validation and parsing
+- Customer association (only configured customers can upload)
+
+### ✅ **RAG Implementation**
+- RAG-enhanced AI test case generation using OpenAI GPT-4 and embeddings
+- Document chunking and vector search implementation with pgvector
+- Supabase vector extension integration
+- Context-aware test case generation
+
+### ✅ **AI Processing**
+- **Two-phase AI processing**: Analysis → Rule Validation → Generation
+- Real-time progress indicators for each phase
+- OpenAI integration with pre-configured API key (no model selection UI)
+
+### ✅ **Test Case Management**
+- Test case categorization: **Functional Tests, Compliance Tests, Edge Cases, Integration Tests**
+- Test case management dashboard with review and editing capabilities
+- Display RAG context used for each generated test case
+- File upload option for additional test cases (.csv/.json format)
+- Category filtering and search functionality
+
+### ✅ **Dashboard & Reporting**
+- Professional enterprise UI with comprehensive data visualization and charts
+- Review dashboard with quick stats and test case previews
+- Execution tracking with test status management and basic reporting
+- Mark tests as "Ready", "In Progress", "Complete"
+
+---
+
+## ❌ **Excluded for MVP (Phase 2)**
+- Export functionality (ZIP files) - **Skip for now**
+- Email delivery options - **Skip for now**  
+- Advanced model configuration - **Single OpenAI model only**
+- Real internal tool API integrations - **Mock data only**
+
+---
+
+## Technical Stack Specifications
+
+### **Database (Supabase)**
+```sql
+-- Required tables with pgvector extension
+- internal_tools (mock integrations)
+- customers (with solution_id and is_configured)
+- documents (pdf/doc/txt support)
+- document_chunks (RAG embeddings)
+- test_cases (with RAG context and categories)
+```
+
+### **Frontend (React + Replit)**
+- React with Tailwind CSS
+- File upload with drag-drop interface
+- Real-time progress indicators
+- Dashboard with charts (recharts)
+- Professional enterprise UI design
+
+### **AI Integration**
+- OpenAI GPT-4 for test case generation
+- OpenAI Embeddings API for RAG
+- Vector similarity search
+- Context injection for better test cases
+
+---
+
+## Mock Data Requirements
+
+### **3 Internal Tools**
+1. **Salesforce CRM** (OAuth mock)
+2. **SAP Enterprise** (API key mock)  
+3. **Internal HR Portal** (Basic auth mock)
+
+### **Sample Customers with solution_id**
+- `SF_001_TECH` - TechCorp Inc (Technology)
+- `SF_002_FIN` - FinanceGroup LLC (Financial)
+- `SAP_HC_001` - HealthCare Partners (Healthcare)
+- `HR_EDU_001` - Education Institute (Education)
+
+### **Document Templates**
+- Software License Agreements
+- Employee Handbooks
+- HIPAA Compliance Manuals
+- Union Agreements
+
+---
+
+## User Workflow
+1. **Admin Login** → 
+2. **Configure Internal Tools** (mock integrations) →
+3. **Import/Configure Customers** (with solution_id) →
+4. **Upload Documents** (pdf/doc/txt) →
+5. **AI Processing** (RAG + GPT-4 generation) →
+6. **Review Test Cases** (with RAG context) →
+7. **Track Execution** (status management)
+
+---
+
+## Key Success Criteria
+- End-to-end workflow completion
+- RAG context visible in generated test cases
+- Professional enterprise UI with **Clause2Case** branding
+- Real-time processing indicators
+- 15+ test cases per document across 4 categories
+- Demo-ready with realistic mock data
+
+---
+
+## Timeline: 2 Days MVP
+**Focus on core AI/RAG functionality over export features**
+
+**Clause2Case** - Transform business documents into comprehensive test cases with AI-powered intelligence. This revised plan prioritizes the most impactful features for a successful POC demonstration while maintaining realistic 2-day development scope.
