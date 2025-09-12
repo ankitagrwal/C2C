@@ -11,6 +11,7 @@ import {
 } from "@shared/schema";
 import multer, { type FileFilterCallback, type Multer } from "multer";
 import { z } from "zod";
+import { processDocumentForTestGeneration } from "./ai-service";
 
 // Simple in-memory rate limiter for login attempts
 const loginAttempts = new Map<string, { count: number; resetTime: number }>();
@@ -296,7 +297,7 @@ const upload = multer({
   fileFilter: (req: Request, file: Express.Multer.File, cb: FileFilterCallback) => {
     try {
       if (!validateFileType(file)) {
-        return cb(new Error('Invalid file type. Only PDF, DOC, DOCX, and TXT files are allowed.'));
+        return cb(new Error('Invalid file type. Only PDF, DOCX, and TXT files are allowed.'));
       }
       cb(null, true);
     } catch (error) {
@@ -834,33 +835,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
         progress: 0
       });
 
-      // For now, create some sample test cases
-      // In the next step, we'll integrate with OpenAI
-      const sampleTestCases = [
-        {
-          documentId,
-          content: `Verify compliance requirements from ${document.filename}`,
-          category: 'Compliance Tests',
-          source: 'generated' as const,
-          confidenceScore: 0.85,
-          contextUsed: `Content extracted from ${document.filename}`,
-          executionStatus: 'ready' as const
-        },
-        {
-          documentId,
-          content: `Test functional requirements specified in ${document.filename}`,
-          category: 'Functional Tests',
-          source: 'generated' as const,
-          confidenceScore: 0.92,
-          contextUsed: `Business rules from ${document.filename}`,
-          executionStatus: 'ready' as const
-        }
-      ];
+      // Real AI-powered test case generation using OpenAI
+      console.log(`Starting AI test generation for document: ${document.filename}`);
+      
+      // Get any additional requirements from request body
+      const { requirements } = req.body || {};
+      
+      let aiResult;
+      try {
+        // Use the AI service to process the document and generate test cases
+        aiResult = await processDocumentForTestGeneration(
+          document.fileData, // Document buffer
+          document.filename, // Original filename
+          documentId, // Document ID
+          document.title || 'business_document', // Document type
+          requirements // Optional requirements
+        );
+        
+        console.log(`AI processing completed. Generated ${aiResult.testCases.testCases.length} test cases in ${aiResult.testCases.processingTime}ms`);
+      } catch (aiError) {
+        console.error('AI processing failed:', aiError);
+        
+        // Update job to failed status
+        await storage.updateProcessingJob(job.id, {
+          status: 'failed',
+          progress: 0,
+          result: { error: aiError instanceof Error ? aiError.message : 'AI processing failed' },
+          completedAt: new Date()
+        });
+        
+        return res.status(500).json({
+          error: 'Failed to process document with AI',
+          details: aiError instanceof Error ? aiError.message : 'Unknown AI processing error',
+          code: 'AI_PROCESSING_ERROR'
+        });
+      }
 
+      // Convert AI-generated test cases to database format
       const createdTestCases = [];
-      for (const testCaseData of sampleTestCases) {
-        const testCase = await storage.createTestCase(testCaseData);
-        createdTestCases.push(testCase);
+      for (const aiTestCase of aiResult.testCases.testCases) {
+        try {
+          const testCaseData = {
+            documentId,
+            content: `${aiTestCase.title}\n\nDescription: ${aiTestCase.description}\n\nSteps:\n${aiTestCase.steps.map((step, idx) => `${idx + 1}. ${step}`).join('\n')}\n\nExpected Result: ${aiTestCase.expectedResult}`,
+            category: aiTestCase.category === 'functional' ? 'Functional Tests' :
+                     aiTestCase.category === 'compliance' ? 'Compliance Tests' :
+                     aiTestCase.category === 'integration' ? 'Integration Tests' :
+                     'Edge Cases',
+            source: 'generated' as const,
+            confidenceScore: aiTestCase.priority === 'high' ? 0.9 : 
+                           aiTestCase.priority === 'medium' ? 0.75 : 0.6,
+            contextUsed: aiResult.testCases.contextUsed.join(' | '),
+            executionStatus: 'ready' as const
+          };
+          
+          const testCase = await storage.createTestCase(testCaseData);
+          createdTestCases.push(testCase);
+        } catch (testCaseError) {
+          console.error('Failed to create test case:', testCaseError);
+          // Continue with other test cases even if one fails
+        }
       }
 
       // Update job status to completed
