@@ -19,6 +19,7 @@ const { Pool } = pg;
 const sessionPool = new Pool({ connectionString: process.env.DATABASE_URL });
 const PgSession = ConnectPgSimple(session);
 app.use(session({
+  name: 'clause2case-session', // Explicit session cookie name
   store: new PgSession({
     pool: sessionPool, // Use standard pg pool for session storage
     tableName: 'session',
@@ -35,10 +36,11 @@ app.use(session({
   resave: false,
   saveUninitialized: false,
   cookie: {
-    secure: process.env.NODE_ENV === 'production',
+    secure: process.env.NODE_ENV === 'production', // Secure cookies in production, HTTP allowed in development
     httpOnly: true,
     maxAge: 24 * 60 * 60 * 1000, // 24 hours
     sameSite: 'lax', // CSRF protection
+    path: '/', // Explicit path to ensure cookie is sent with all requests
   },
 }));
 
