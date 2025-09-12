@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -7,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Skeleton } from "@/components/ui/skeleton";
 import { 
   Upload, 
   FileText, 
@@ -17,38 +19,15 @@ import {
   Building2,
   Zap 
 } from "lucide-react";
+import type { SelectCustomer } from "@shared/schema";
 
-// Mock customers data //todo: remove mock functionality
-const mockCustomers = [
-  {
-    id: '1',
-    name: 'TechCorp Inc',
-    solutionId: 'SF_001_TECH',
-    industry: 'Technology',
-    isConfigured: true
-  },
-  {
-    id: '2',
-    name: 'FinanceGroup LLC',
-    solutionId: 'SF_002_FIN',
-    industry: 'Financial Services',
-    isConfigured: true
-  },
-  {
-    id: '3',
-    name: 'HealthCare Partners',
-    solutionId: 'SAP_HC_001',
-    industry: 'Healthcare',
-    isConfigured: true
-  },
-  {
-    id: '4',
-    name: 'Education Institute',
-    solutionId: 'HR_EDU_001',
-    industry: 'Education',
-    isConfigured: false
-  }
-];
+// Hook to fetch customers from API
+function useCustomers() {
+  return useQuery<SelectCustomer[]>({
+    queryKey: ['/api/customers'],
+    select: (data) => data?.filter(customer => customer.isConfigured) || []
+  });
+}
 
 const documentTypes = [
   'Contract',
@@ -76,7 +55,7 @@ export default function DocumentUpload() {
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [dragActive, setDragActive] = useState(false);
 
-  const configuredCustomers = mockCustomers.filter(c => c.isConfigured);
+  const { data: configuredCustomers, isLoading: isLoadingCustomers, error: customerError } = useCustomers();
 
   const handleDrag = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -180,7 +159,8 @@ export default function DocumentUpload() {
     }
   };
 
-  const selectedCustomerData = configuredCustomers.find(c => c.id === selectedCustomer);
+  const selectedCustomerData = selectedCustomer ? 
+    configuredCustomers?.find(c => c.id === selectedCustomer) : null;
 
   return (
     <div className="space-y-6" data-testid="document-upload">
@@ -206,23 +186,50 @@ export default function DocumentUpload() {
             <CardDescription>Choose the customer this document belongs to</CardDescription>
           </CardHeader>
           <CardContent>
-            <Select value={selectedCustomer} onValueChange={setSelectedCustomer}>
-              <SelectTrigger data-testid="select-customer">
-                <SelectValue placeholder="Select a configured customer" />
-              </SelectTrigger>
-              <SelectContent>
-                {configuredCustomers.map((customer) => (
-                  <SelectItem key={customer.id} value={customer.id}>
-                    <div>
-                      <div className="font-medium">{customer.name}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {customer.solutionId} • {customer.industry}
-                      </div>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {customerError && (
+              <Alert className="mb-4">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  Failed to load customers. Please check your connection and try again.
+                </AlertDescription>
+              </Alert>
+            )}
+            
+            {isLoadingCustomers ? (
+              <div className="space-y-2">
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-16 w-full" />
+              </div>
+            ) : (
+              <>
+                <Select value={selectedCustomer} onValueChange={setSelectedCustomer}>
+                  <SelectTrigger data-testid="select-customer">
+                    <SelectValue placeholder="Select a configured customer" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {configuredCustomers?.map((customer) => (
+                      <SelectItem key={customer.id} value={customer.id}>
+                        <div>
+                          <div className="font-medium">{customer.name}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {customer.solutionId} • {customer.industry}
+                          </div>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                
+                {!configuredCustomers?.length && !isLoadingCustomers && (
+                  <Alert className="mt-4">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>
+                      No configured customers found. Please add customers through the customer management system.
+                    </AlertDescription>
+                  </Alert>
+                )}
+              </>
+            )}
             
             {selectedCustomerData && (
               <div className="mt-3 p-3 bg-muted/50 rounded-md">
