@@ -171,7 +171,7 @@ export default function DocumentUpload() {
           <p className="text-muted-foreground">Upload documents for AI-powered test case generation</p>
         </div>
         <Badge variant="secondary">
-          {configuredCustomers.length} customers configured
+          {configuredCustomers?.length || 0} customers configured
         </Badge>
       </div>
 
