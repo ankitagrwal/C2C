@@ -50,6 +50,19 @@ export const documents = pgTable("documents", {
   createdAt: timestamp("created_at").default(sql`now()`),
 });
 
+// Processing jobs for document analysis
+export const processingJobs = pgTable("processing_jobs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  documentId: varchar("document_id").references(() => documents.id),
+  status: text("status").default("pending"), // 'pending', 'processing', 'completed', 'failed'
+  jobType: text("job_type").notNull(), // 'text_extraction', 'test_generation', 'embedding'
+  progress: integer("progress").default(0),
+  errorMessage: text("error_message"),
+  result: jsonb("result"),
+  createdAt: timestamp("created_at").default(sql`now()`),
+  completedAt: timestamp("completed_at"),
+});
+
 // Generated test cases
 export const testCases = pgTable("test_cases", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -67,6 +80,7 @@ export const testCases = pgTable("test_cases", {
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true,
+  role: true,
 });
 
 export const insertInternalToolSchema = createInsertSchema(internalTools).omit({
@@ -80,6 +94,11 @@ export const insertCustomerSchema = createInsertSchema(customers).omit({
 });
 
 export const insertDocumentSchema = createInsertSchema(documents).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertProcessingJobSchema = createInsertSchema(processingJobs).omit({
   id: true,
   createdAt: true,
 });
@@ -98,5 +117,7 @@ export type Customer = typeof customers.$inferSelect;
 export type InsertCustomer = z.infer<typeof insertCustomerSchema>;
 export type Document = typeof documents.$inferSelect;
 export type InsertDocument = z.infer<typeof insertDocumentSchema>;
+export type ProcessingJob = typeof processingJobs.$inferSelect;
+export type InsertProcessingJob = z.infer<typeof insertProcessingJobSchema>;
 export type TestCase = typeof testCases.$inferSelect;
 export type InsertTestCase = z.infer<typeof insertTestCaseSchema>;
