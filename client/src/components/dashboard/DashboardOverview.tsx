@@ -57,10 +57,6 @@ const mockMetrics = {
 };
 
 export default function DashboardOverview() {
-  const handleQuickAction = (action: string) => {
-    console.log(`Quick action triggered: ${action}`);
-  };
-
   return (
     <div className="space-y-6" data-testid="dashboard-overview">
       {/* Header */}
@@ -69,10 +65,6 @@ export default function DashboardOverview() {
           <h1 className="text-3xl font-semibold">Dashboard</h1>
           <p className="text-muted-foreground">AI Test Case Generation Platform Overview</p>
         </div>
-        <Button onClick={() => handleQuickAction('new-document')} data-testid="button-upload">
-          <FileText className="mr-2 h-4 w-4" />
-          Upload Document
-        </Button>
       </div>
 
       {/* Key Metrics Cards */}

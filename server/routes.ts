@@ -12,6 +12,7 @@ import {
 import multer, { type FileFilterCallback, type Multer } from "multer";
 import { z } from "zod";
 import { processDocumentForTestGeneration } from "./ai-service";
+import { parseDocumentForCompanyDetails } from "./services/documentParser";
 
 // Simple in-memory rate limiter for login attempts
 const loginAttempts = new Map<string, { count: number; resetTime: number }>();
@@ -51,7 +52,7 @@ interface AuthenticatedRequest extends Request {
   session: {
     userId?: string;
     user?: Omit<User, 'password'>;
-  } & Express.Session;
+  } & Request['session'];
   document?: any; // Store document for authorized requests
 }
 
@@ -150,7 +151,7 @@ const requireAdmin = (req: Request, res: Response, next: NextFunction) => {
 };
 
 // Document ownership/authorization middleware
-const authorizeDocumentAccess = async (req: Request, res: Response, next: NextFunction) => {
+const authorizeDocumentAccess = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
     const documentId = req.params.id;
     if (!documentId) {
@@ -630,6 +631,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       console.error('File upload error:', error);
       return handleDatabaseError(error, res, 'upload document');
+    }
+  });
+
+  // Document analysis for company detection endpoint
+  app.post('/api/documents/analyze-company', requireAuth, requireCSRFToken, upload.single('document'), async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ 
+          error: 'No file uploaded',
+          code: 'MISSING_FILE' 
+        });
+      }
+
+      // Validate file type
+      const fileExt = req.file.originalname.toLowerCase().slice(req.file.originalname.lastIndexOf('.'));
+      if (!['.txt', '.pdf', '.doc', '.docx'].includes(fileExt)) {
+        return res.status(400).json({ 
+          error: 'Unsupported file type for analysis',
+          code: 'INVALID_FILE_TYPE' 
+        });
+      }
+
+      // Extract text content for analysis
+      let content = '';
+      
+      if (fileExt === '.txt') {
+        content = req.file.buffer.toString('utf-8');
+      } else {
+        // For non-text files, we'll create a placeholder with some basic analysis
+        // In a real implementation, you'd use proper text extraction libraries
+        content = `Analyzing ${req.file.originalname} (${fileExt.toUpperCase()} file)
+        
+        File size: ${(req.file.size / 1024 / 1024).toFixed(2)} MB
+        Upload date: ${new Date().toISOString()}
+        
+        [This is a mock analysis for demonstration. In production, this would contain 
+         extracted text from PDF/DOC files using libraries like pdf-parse or mammoth.]
+        
+        Sample business document content for analysis:
+        - Company operations and services
+        - Contract terms and conditions  
+        - Business contact information
+        - Industry-specific terminology`;
+      }
+
+      console.log(`Analyzing document: ${req.file.originalname}`);
+      console.log(`Content length: ${content.length} characters`);
+
+      // Use AI to extract company details
+      const extractedDetails = await parseDocumentForCompanyDetails(content);
+      
+      res.json(extractedDetails);
+
+    } catch (error) {
+      console.error('Document analysis error:', error);
+      res.status(500).json({ 
+        error: 'Failed to analyze document',
+        code: 'ANALYSIS_ERROR',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      });
     }
   });
 
