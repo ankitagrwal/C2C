@@ -74,9 +74,10 @@ interface AppSidebarProps {
     username: string;
     role: string;
   };
+  onLogout?: () => void;
 }
 
-export function AppSidebar({ user }: AppSidebarProps) {
+export function AppSidebar({ user, onLogout }: AppSidebarProps) {
   const [location] = useLocation();
 
   const isActiveRoute = (url: string) => {
@@ -171,7 +172,12 @@ export function AppSidebar({ user }: AppSidebarProps) {
                 <p className="text-xs text-muted-foreground capitalize">{user.role}</p>
               </div>
             </div>
-            <Button variant="ghost" size="sm" data-testid="button-logout">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              data-testid="button-logout"
+              onClick={onLogout}
+            >
               Logout
             </Button>
           </div>

@@ -1,0 +1,54 @@
+{
+  "testCases": [
+    {
+      "content": "Verify that user can successfully login with valid credentials and access the dashboard",
+      "category": "Functional Tests",
+      "source": "manual",
+      "confidenceScore": 0.95,
+      "contextUsed": "User authentication flow and dashboard access requirements",
+      "executionStatus": "ready",
+      "documentName": "User Authentication Requirements.pdf",
+      "customerName": "TechCorp Inc"
+    },
+    {
+      "content": "Test that the system handles maximum concurrent users limit as specified in licensing agreement",
+      "category": "Compliance Tests", 
+      "source": "uploaded",
+      "confidenceScore": 0.88,
+      "contextUsed": "Software licensing terms specify maximum 500 concurrent users",
+      "executionStatus": "ready",
+      "documentName": "Software License Agreement 2024.pdf",
+      "customerName": "Enterprise Solutions"
+    },
+    {
+      "content": "Validate GDPR compliance when user requests data deletion",
+      "category": "Compliance Tests",
+      "source": "uploaded", 
+      "confidenceScore": 0.92,
+      "contextUsed": "GDPR Article 17 - Right to erasure requirements",
+      "executionStatus": "ready",
+      "documentName": "GDPR Compliance Manual.pdf",
+      "customerName": "Healthcare Partners"
+    },
+    {
+      "content": "Test edge case: What happens when session expires during file upload",
+      "category": "Edge Cases",
+      "source": "manual",
+      "confidenceScore": null,
+      "contextUsed": null,
+      "executionStatus": "ready",
+      "documentName": "File Upload API Documentation.md",
+      "customerName": "CloudTech Solutions"
+    },
+    {
+      "content": "Verify API integration handles authentication correctly with external HR systems",
+      "category": "Integration Tests",
+      "source": "uploaded",
+      "confidenceScore": 0.89,
+      "contextUsed": "External HR system integration requires OAuth 2.0 authentication flow",
+      "executionStatus": "ready", 
+      "documentName": "HR System Integration Guide.pdf",
+      "customerName": "Education Institute"
+    }
+  ]
+}

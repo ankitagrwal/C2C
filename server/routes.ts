@@ -667,6 +667,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Export test cases endpoint (must come before :id route)
+  app.get('/api/test-cases/export', requireAuth, async (req, res) => {
+    try {
+      const format = req.query.format as string || 'json';
+      
+      if (!['json', 'csv'].includes(format)) {
+        return res.status(400).json({
+          error: 'Invalid format. Supported formats: json, csv',
+          code: 'INVALID_FORMAT'
+        });
+      }
+
+      const testCases = await storage.getTestCases();
+      
+      if (format === 'csv') {
+        // Convert to CSV format
+        const csvHeaders = [
+          'content', 'category', 'source', 'confidenceScore', 
+          'contextUsed', 'executionStatus', 'createdAt'
+        ];
+        
+        const csvRows = testCases.map(tc => [
+          `"${tc.content.replace(/"/g, '""')}"`,
+          `"${tc.category}"`,
+          `"${tc.source}"`,
+          tc.confidenceScore || '',
+          `"${tc.contextUsed || ''}"`,
+          `"${tc.executionStatus}"`,
+          tc.createdAt ? tc.createdAt.toISOString() : ''
+        ]);
+        
+        const csvContent = [csvHeaders.join(','), ...csvRows.map(row => row.join(','))].join('\n');
+        
+        res.setHeader('Content-Type', 'text/csv');
+        res.setHeader('Content-Disposition', `attachment; filename="test-cases-${new Date().toISOString().split('T')[0]}.csv"`);
+        res.send(csvContent);
+      } else {
+        // JSON format
+        const exportData = {
+          exportedAt: new Date().toISOString(),
+          count: testCases.length,
+          testCases: testCases.map(tc => ({
+            content: tc.content,
+            category: tc.category,
+            source: tc.source,
+            confidenceScore: tc.confidenceScore,
+            contextUsed: tc.contextUsed,
+            executionStatus: tc.executionStatus,
+            createdAt: tc.createdAt?.toISOString() || null
+          }))
+        };
+        
+        res.setHeader('Content-Type', 'application/json');
+        res.setHeader('Content-Disposition', `attachment; filename="test-cases-${new Date().toISOString().split('T')[0]}.json"`);
+        res.json(exportData);
+      }
+    } catch (error) {
+      return handleDatabaseError(error, res, 'export test cases');
+    }
+  });
+
   app.get('/api/test-cases/:id', requireAuth, async (req, res) => {
     try {
       validateParams(uuidParamSchema, req.params);
@@ -771,6 +832,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       return handleDatabaseError(error, res, 'delete test case');
+    }
+  });
+
+  // Import test cases endpoint
+  app.post('/api/test-cases/import', requireAuth, requireCSRFToken, async (req, res) => {
+    try {
+      const importData = z.object({
+        testCases: z.array(z.object({
+          content: z.string().min(1),
+          category: z.string().min(1), 
+          source: z.enum(['generated', 'manual', 'uploaded']).default('uploaded'),
+          confidenceScore: z.number().min(0).max(1).nullable().optional(),
+          contextUsed: z.string().nullable().optional(),
+          executionStatus: z.enum(['ready', 'in_progress', 'complete']).default('ready'),
+          documentName: z.string().optional(),
+          customerName: z.string().optional()
+        }))
+      }).parse(req.body);
+
+      const createdTestCases = [];
+      
+      for (const testCaseData of importData.testCases) {
+        const insertData = {
+          content: testCaseData.content,
+          category: testCaseData.category,
+          source: testCaseData.source,
+          confidenceScore: testCaseData.confidenceScore,
+          contextUsed: testCaseData.contextUsed,
+          executionStatus: testCaseData.executionStatus,
+          documentId: null, // Can be linked later if needed
+          createdAt: new Date()
+        };
+        
+        const testCase = await storage.createTestCase(insertData);
+        createdTestCases.push(testCase);
+      }
+
+      res.json({
+        message: `Successfully imported ${createdTestCases.length} test cases`,
+        count: createdTestCases.length,
+        testCases: createdTestCases
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          error: 'Invalid import data format', 
+          details: error.errors,
+          code: 'VALIDATION_ERROR'
+        });
+      }
+      return handleDatabaseError(error, res, 'import test cases');
     }
   });
 

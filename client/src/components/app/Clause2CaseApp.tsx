@@ -114,8 +114,24 @@ export default function Clause2CaseApp() {
     setIsLoading(false);
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     console.log('User logged out');
+    
+    try {
+      // Call backend logout API to destroy server session
+      await fetch('/api/auth/logout', {
+        method: 'POST',
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest',
+        },
+        credentials: 'include'
+      });
+    } catch (error) {
+      console.error('Logout API call failed:', error);
+      // Continue with local logout even if server call fails
+    }
+    
+    // Clear local session and update UI state
     localStorage.removeItem(SESSION_KEY);
     setUser(null);
     setLoginError('');

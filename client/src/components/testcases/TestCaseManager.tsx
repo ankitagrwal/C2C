@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -8,6 +9,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useToast } from "@/hooks/use-toast";
+import { queryClient, apiRequest } from "@/lib/queryClient";
 import { 
   TestTube2, 
   FileText, 
@@ -193,37 +196,209 @@ function TestCaseDetailDialog({ testCase, onSave }: TestCaseDetailDialogProps) {
 }
 
 export default function TestCaseManager() {
-  const [testCases, setTestCases] = useState(mockTestCases);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All Categories');
   const [selectedStatus, setSelectedStatus] = useState('All Statuses');
   const [selectedSource, setSelectedSource] = useState('All Sources');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
+
+  // Fetch test cases from API
+  const { data: testCases = [], isLoading, error, refetch } = useQuery({
+    queryKey: ['/api/test-cases'],
+    queryFn: () => fetch('/api/test-cases', { credentials: 'include' })
+      .then(res => {
+        if (!res.ok) throw new Error('Failed to fetch test cases');
+        return res.json();
+      }),
+    retry: 3,
+    retryDelay: 1000
+  });
+
+  // Import mutation
+  const importMutation = useMutation({
+    mutationFn: async (data: any) => {
+      return apiRequest('POST', '/api/test-cases/import', data);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Import Successful",
+        description: "Test cases have been successfully imported."
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/test-cases'] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Import Failed",
+        description: error instanceof Error ? error.message : "Failed to import test cases",
+        variant: "destructive"
+      });
+    }
+  });
+
+  // Update test case mutation
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: any }) => {
+      return apiRequest('PUT', `/api/test-cases/${id}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/test-cases'] });
+      toast({ title: "Test case updated successfully" });
+    },
+    onError: (error) => {
+      toast({
+        title: "Update Failed",
+        description: error instanceof Error ? error.message : "Failed to update test case",
+        variant: "destructive"
+      });
+    }
+  });
+
+  // Delete test case mutation
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return apiRequest('DELETE', `/api/test-cases/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/test-cases'] });
+      toast({ title: "Test case deleted successfully" });
+    },
+    onError: (error) => {
+      toast({
+        title: "Delete Failed",
+        description: error instanceof Error ? error.message : "Failed to delete test case",
+        variant: "destructive"
+      });
+    }
+  });
 
   const handleSaveTestCase = (id: string, updates: any) => {
-    setTestCases(prev => prev.map(tc => 
-      tc.id === id ? { ...tc, ...updates } : tc
-    ));
-    console.log('Test case saved:', id, updates);
+    updateMutation.mutate({ id, data: updates });
   };
 
   const handleDeleteTestCase = (id: string) => {
     if (confirm('Are you sure you want to delete this test case?')) {
-      setTestCases(prev => prev.filter(tc => tc.id !== id));
-      console.log('Test case deleted:', id);
+      deleteMutation.mutate(id);
     }
   };
 
   const handleStatusChange = (id: string, newStatus: string) => {
-    setTestCases(prev => prev.map(tc => 
-      tc.id === id ? { ...tc, executionStatus: newStatus } : tc
-    ));
-    console.log('Test case status changed:', id, newStatus);
+    updateMutation.mutate({ id, data: { executionStatus: newStatus } });
   };
+
+  const handleImport = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text);
+      
+      if (!data.testCases || !Array.isArray(data.testCases)) {
+        throw new Error('Invalid file format. Expected JSON with testCases array.');
+      }
+
+      importMutation.mutate(data);
+    } catch (error) {
+      toast({
+        title: "Import Failed", 
+        description: error instanceof Error ? error.message : "Failed to read file",
+        variant: "destructive"
+      });
+    }
+    
+    // Clear the file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const handleExport = async (format: 'json' | 'csv' = 'json') => {
+    try {
+      const response = await fetch(`/api/test-cases/export?format=${format}`, {
+        credentials: 'include'
+      });
+      
+      if (!response.ok) {
+        throw new Error('Export failed');
+      }
+      
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = url;
+      a.download = `test-cases-${new Date().toISOString().split('T')[0]}.${format}`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      
+      toast({
+        title: "Export Successful",
+        description: `Test cases exported as ${format.toUpperCase()} file.`
+      });
+    } catch (error) {
+      toast({
+        title: "Export Failed",
+        description: error instanceof Error ? error.message : "Failed to export test cases",
+        variant: "destructive"
+      });
+    }
+  };
+
+  // Show loading state
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-semibold">Test Cases</h1>
+          <p className="text-muted-foreground">Loading test cases...</p>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          {[...Array(4)].map((_, i) => (
+            <Card key={i} className="animate-pulse">
+              <CardContent className="p-6">
+                <div className="h-4 bg-muted rounded w-3/4 mb-2"></div>
+                <div className="h-8 bg-muted rounded w-1/2"></div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state  
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-semibold">Test Cases</h1>
+          <p className="text-muted-foreground">Failed to load test cases</p>
+        </div>
+        <Card>
+          <CardContent className="p-6 text-center">
+            <p className="text-muted-foreground mb-4">
+              {error instanceof Error ? error.message : 'An unexpected error occurred'}
+            </p>
+            <Button onClick={() => refetch()} variant="outline">
+              Try Again
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   const filteredTestCases = testCases.filter(tc => {
     const matchesSearch = tc.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         tc.documentName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         tc.customerName.toLowerCase().includes(searchQuery.toLowerCase());
+                         (tc.documentName || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         (tc.customerName || '').toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCategory = selectedCategory === 'All Categories' || tc.category === selectedCategory;
     const matchesStatus = selectedStatus === 'All Statuses' || tc.executionStatus === selectedStatus;
     const matchesSource = selectedSource === 'All Sources' || tc.source === selectedSource;
@@ -278,11 +453,26 @@ export default function TestCaseManager() {
           <p className="text-muted-foreground">Review and manage AI-generated test cases</p>
         </div>
         <div className="flex space-x-2">
-          <Button variant="outline" data-testid="button-import">
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileChange}
+            accept=".json"
+            style={{ display: 'none' }}
+          />
+          <Button 
+            variant="outline" 
+            data-testid="button-import"
+            onClick={handleImport}
+            disabled={importMutation.isPending}
+          >
             <Plus className="mr-2 h-4 w-4" />
-            Import Tests
+            {importMutation.isPending ? 'Importing...' : 'Import Tests'}
           </Button>
-          <Button data-testid="button-export">
+          <Button 
+            data-testid="button-export"
+            onClick={() => handleExport('json')}
+          >
             Export Suite
           </Button>
         </div>
