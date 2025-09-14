@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useToast } from "@/hooks/use-toast";
+import { queryClient, apiRequest } from "@/lib/queryClient";
 import { 
   Upload, 
   FileText, 
@@ -19,11 +21,11 @@ import {
   Building2,
   Zap 
 } from "lucide-react";
-import type { SelectCustomer } from "@shared/schema";
+import type { Customer } from "@shared/schema";
 
 // Hook to fetch customers from API
 function useCustomers() {
-  return useQuery<SelectCustomer[]>({
+  return useQuery<Customer[]>({
     queryKey: ['/api/customers'],
     select: (data) => data?.filter(customer => customer.isConfigured) || []
   });
@@ -54,8 +56,40 @@ export default function DocumentUpload() {
   const [selectedDocType, setSelectedDocType] = useState('');
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [dragActive, setDragActive] = useState(false);
+  const { toast } = useToast();
 
   const { data: configuredCustomers, isLoading: isLoadingCustomers, error: customerError } = useCustomers();
+  
+  // Mutation for uploading files
+  const uploadMutation = useMutation({
+    mutationFn: async ({ file, customerId, docType }: { file: File; customerId: string; docType: string }) => {
+      const formData = new FormData();
+      formData.append('document', file);
+      formData.append('customerId', customerId);
+      formData.append('title', docType);
+      formData.append('docType', docType);
+      
+      // Use fetch directly for FormData uploads
+      const response = await fetch('/api/documents/upload', {
+        method: 'POST',
+        body: formData,
+        credentials: 'include',
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest'
+        }
+      });
+
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(`Upload failed: ${response.status} - ${text}`);
+      }
+
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/documents'] });
+    }
+  });
 
   const handleDrag = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -79,7 +113,11 @@ export default function DocumentUpload() {
 
   const handleFiles = (files: File[]) => {
     if (!selectedCustomer || !selectedDocType) {
-      alert('Please select a customer and document type first.');
+      toast({
+        title: "Selection Required",
+        description: "Please select a customer and document type first.",
+        variant: "destructive"
+      });
       return;
     }
 
@@ -94,39 +132,65 @@ export default function DocumentUpload() {
 
     setUploadedFiles(prev => [...prev, ...newFiles]);
     
-    // Simulate upload and processing
+    // Upload files with real API calls
     newFiles.forEach(uploadedFile => {
-      simulateFileProcessing(uploadedFile.id);
+      uploadFile(uploadedFile);
     });
   };
 
-  const simulateFileProcessing = (fileId: string) => {
-    console.log('Processing file:', fileId);
-    
-    // Simulate upload progress
-    const uploadInterval = setInterval(() => {
-      setUploadedFiles(prev => prev.map(file => {
-        if (file.id === fileId && file.status === 'uploading') {
-          const newProgress = Math.min(file.progress + 10, 100);
-          return {
-            ...file,
-            progress: newProgress,
-            status: newProgress === 100 ? 'processing' : 'uploading'
-          };
-        }
-        return file;
-      }));
-    }, 200);
+  const uploadFile = async (uploadedFile: UploadedFile) => {
+    try {
+      console.log('Starting upload for file:', uploadedFile.file.name);
+      
+      // Start upload progress simulation
+      let progress = 0;
+      const progressInterval = setInterval(() => {
+        progress = Math.min(progress + 5, 90);
+        setUploadedFiles(prev => prev.map(file => 
+          file.id === uploadedFile.id 
+            ? { ...file, progress, status: 'uploading' }
+            : file
+        ));
+      }, 100);
 
-    // Complete processing after upload
-    setTimeout(() => {
-      clearInterval(uploadInterval);
+      // Make the actual API call
+      const result = await uploadMutation.mutateAsync({
+        file: uploadedFile.file,
+        customerId: uploadedFile.customerId,
+        docType: uploadedFile.docType
+      });
+
+      clearInterval(progressInterval);
+      
+      // Mark as completed
       setUploadedFiles(prev => prev.map(file => 
-        file.id === fileId 
+        file.id === uploadedFile.id 
           ? { ...file, status: 'completed', progress: 100 }
           : file
       ));
-    }, 3000);
+
+      toast({
+        title: "Upload Successful",
+        description: `${uploadedFile.file.name} has been uploaded and is ready for processing.`
+      });
+
+      console.log('Upload successful:', result);
+
+    } catch (error) {
+      console.error('Upload failed:', error);
+      
+      setUploadedFiles(prev => prev.map(file => 
+        file.id === uploadedFile.id 
+          ? { ...file, status: 'error', progress: 0, error: error instanceof Error ? error.message : 'Upload failed' }
+          : file
+      ));
+
+      toast({
+        title: "Upload Failed",
+        description: `Failed to upload ${uploadedFile.file.name}. ${error instanceof Error ? error.message : 'Please try again.'}`,
+        variant: "destructive"
+      });
+    }
   };
 
   const removeFile = (fileId: string) => {
@@ -338,7 +402,7 @@ export default function DocumentUpload() {
           <CardContent>
             <div className="space-y-4">
               {uploadedFiles.map((file) => {
-                const customer = configuredCustomers.find(c => c.id === file.customerId);
+                const customer = configuredCustomers?.find(c => c.id === file.customerId);
                 return (
                   <div key={file.id} className="border rounded-lg p-4">
                     <div className="flex items-center justify-between mb-3">

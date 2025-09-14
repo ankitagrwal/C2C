@@ -5,6 +5,7 @@ import MainLayout from "../layout/MainLayout";
 import DashboardOverview from "../dashboard/DashboardOverview";
 import InternalToolsManager from "../tools/InternalToolsManager";
 import DocumentUpload from "../documents/DocumentUpload";
+import DocumentsList from "../documents/DocumentsList";
 import TestCaseManager from "../testcases/TestCaseManager";
 import { insertUserSchema } from "@shared/schema";
 import { z } from "zod";
@@ -72,29 +73,42 @@ export default function Clause2CaseApp() {
     
     console.log('Login attempt with:', credentials.username);
     
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Demo authentication logic //todo: remove mock functionality
-    if (credentials.username === DEMO_CREDENTIALS.username && 
-        credentials.password === DEMO_CREDENTIALS.password) {
+    try {
+      // Call the actual backend login API
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
+        },
+        body: JSON.stringify(credentials),
+        credentials: 'include', // Include cookies for session
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Login failed');
+      }
+      
+      const data = await response.json();
+      
       const userData: User = {
-        username: credentials.username,
-        role: 'administrator'
+        username: data.user.username,
+        role: data.user.role
       };
       
-      // Store session in localStorage with expiration
+      // Store session data with expiration for UI state
       const sessionData: SessionData = {
         user: userData,
         expires: Date.now() + SESSION_DURATION
       };
-      
       localStorage.setItem(SESSION_KEY, JSON.stringify(sessionData));
       setUser(userData);
-      console.log('Login successful, session stored with 1-hour expiration');
-    } else {
-      setLoginError('Invalid credentials. Use admin/password for demo.');
-      console.log('Login failed: Invalid credentials');
+      console.log('Login successful, server session established');
+      
+    } catch (error) {
+      console.error('Login error:', error);
+      setLoginError(error instanceof Error ? error.message : 'Login failed. Please try again.');
     }
     
     setIsLoading(false);
@@ -142,7 +156,7 @@ export default function Clause2CaseApp() {
             <p className="text-muted-foreground">Customer management coming soon...</p>
           </div>
         </Route>
-        <Route path="/documents" component={DocumentUpload} />
+        <Route path="/documents" component={DocumentsList} />
         <Route path="/test-cases" component={TestCaseManager} />
         <Route path="/ai-processing">
           <div className="text-center py-12">
