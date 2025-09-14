@@ -2,9 +2,12 @@ import express, { type Request, Response, NextFunction } from "express";
 import session from "express-session";
 import ConnectPgSimple from "connect-pg-simple";
 import pg from "pg";
+import bcrypt from "bcryptjs";
+import { eq } from "drizzle-orm";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { db } from "./db";
+import { users } from "../shared/schema";
 
 const app = express();
 
@@ -74,7 +77,39 @@ app.use((req, res, next) => {
   next();
 });
 
+// Ensure admin user exists on startup
+async function ensureAdminUser() {
+  try {
+    console.log('🔐 Ensuring admin user exists...');
+    
+    // Check if admin user already exists
+    const existingAdmin = await db.select().from(users).where(eq(users.username, 'admin')).limit(1);
+    
+    if (existingAdmin.length === 0) {
+      // Create admin user
+      const hashedPassword = await bcrypt.hash('admin123!', 10);
+      
+      await db.insert(users).values({
+        username: 'admin',
+        password: hashedPassword,
+        role: 'admin'
+      });
+      
+      console.log('✅ Admin user created successfully');
+      console.log('   Username: admin');
+      console.log('   Password: admin123!');
+    } else {
+      console.log('✅ Admin user already exists');
+    }
+  } catch (error) {
+    console.error('❌ Error ensuring admin user:', error);
+  }
+}
+
 (async () => {
+  // Ensure admin user exists before starting server
+  await ensureAdminUser();
+  
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
