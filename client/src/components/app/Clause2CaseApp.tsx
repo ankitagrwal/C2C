@@ -26,10 +26,10 @@ interface SessionData {
 const SESSION_KEY = 'clause2case_session';
 const SESSION_DURATION = 60 * 60 * 1000; // 1 hour in milliseconds
 
-// Mock authentication for demo //todo: remove mock functionality
+// Demo credentials reference (for display only)
 const DEMO_CREDENTIALS = {
   username: 'admin',
-  password: 'password'
+  password: 'admin123!'
 };
 
 export default function Clause2CaseApp() {
