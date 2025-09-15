@@ -1,10 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Bot, Clock, CheckCircle, AlertCircle, RefreshCw, FileText } from 'lucide-react';
+import { Bot, Clock, CheckCircle, AlertCircle, RefreshCw, FileText, Settings } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
@@ -37,6 +39,8 @@ export default function ProcessingStep({
   const [jobStatuses, setJobStatuses] = useState<{ [jobId: string]: JobStatus }>({});
   const [allTestCases, setAllTestCases] = useState<TestCase[]>([]);
   const [isPolling, setIsPolling] = useState(false);
+  const [aiProvider, setAiProvider] = useState<'openai' | 'gemini'>('openai');
+  const [showSettings, setShowSettings] = useState(false);
   const { toast } = useToast();
 
   // Start batch processing mutation
@@ -46,7 +50,9 @@ export default function ProcessingStep({
         documentIds: documents.map(doc => doc.id),
         targetMin,
         targetMax,
-        industry
+        industry,
+        aiProvider,
+        aiModel: aiProvider === 'gemini' ? 'gemini-1.5-pro' : 'gpt-4-turbo-preview'
       });
       return response.json();
     },
@@ -221,18 +227,69 @@ export default function ProcessingStep({
       {/* Processing Status Overview */}
       <Card>
         <CardHeader className="pb-4">
-          <CardTitle className="flex items-center space-x-2">
-            {isProcessing ? (
-              <Bot className="w-5 h-5 text-chart-3 animate-pulse" />
-            ) : isCompleted ? (
-              <CheckCircle className="w-5 h-5 text-chart-2" />
-            ) : (
-              <Clock className="w-5 h-5 text-muted-foreground" />
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center space-x-2">
+              {isProcessing ? (
+                <Bot className="w-5 h-5 text-chart-3 animate-pulse" />
+              ) : isCompleted ? (
+                <CheckCircle className="w-5 h-5 text-chart-2" />
+              ) : (
+                <Clock className="w-5 h-5 text-muted-foreground" />
+              )}
+              <span>AI Test Case Generation</span>
+            </CardTitle>
+            {!hasStarted && (
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => setShowSettings(!showSettings)}
+                data-testid="button-ai-settings"
+              >
+                <Settings className="w-4 h-4 mr-1" />
+                Settings
+              </Button>
             )}
-            <span>AI Test Case Generation</span>
-          </CardTitle>
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* AI Provider Settings */}
+          {!hasStarted && showSettings && (
+            <Card className="bg-muted/30">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm">AI Provider Configuration</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="ai-provider" className="text-sm font-medium">
+                    AI Provider
+                  </Label>
+                  <Select value={aiProvider} onValueChange={(value: 'openai' | 'gemini') => setAiProvider(value)}>
+                    <SelectTrigger data-testid="select-ai-provider">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="gemini">
+                        <div className="flex flex-col">
+                          <span>Google Gemini 1.5 Pro</span>
+                          <span className="text-xs text-muted-foreground">Latest multimodal model, excellent reasoning</span>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="openai">
+                        <div className="flex flex-col">
+                          <span>OpenAI GPT-4 Turbo</span>
+                          <span className="text-xs text-muted-foreground">Proven enterprise-grade performance</span>
+                        </div>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Choose your preferred AI provider for test case generation. Both providers will also extract customer metadata automatically.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+          
           {!hasStarted ? (
             <div className="text-center py-8">
               <Bot className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />

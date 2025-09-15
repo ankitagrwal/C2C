@@ -222,13 +222,60 @@ export default function DocumentsWizard({ onComplete, onCancel }: DocumentsWizar
         </p>
       </div>
 
-      {/* Progress Bar */}
-      <div className="space-y-2">
-        <div className="flex justify-between text-sm">
-          <span>Progress</span>
-          <span>{Math.round(progressPercentage)}% Complete</span>
+      {/* Enhanced Progress Indicators */}
+      <div className="space-y-4">
+        {/* Overall Progress Bar */}
+        <div className="space-y-2">
+          <div className="flex justify-between text-sm">
+            <span className="font-medium">Progress</span>
+            <span className="text-primary font-medium">{Math.round(progressPercentage)}% Complete</span>
+          </div>
+          <Progress value={progressPercentage} className="h-3" data-testid="progress-wizard" />
         </div>
-        <Progress value={progressPercentage} className="h-2" data-testid="progress-wizard" />
+
+        {/* Step Progress Indicators */}
+        <div className="flex items-center justify-center space-x-4">
+          {WIZARD_STEPS.map((step, index) => {
+            const stepStatus = getStepStatus(step.id);
+            const Icon = step.icon;
+            
+            return (
+              <div key={step.id} className="flex items-center">
+                <div className={`flex flex-col items-center space-y-2 ${
+                  stepStatus === 'current' ? 'transform scale-110' : ''
+                }`}>
+                  <div className={`w-12 h-12 rounded-full flex items-center justify-center border-2 transition-all ${
+                    stepStatus === 'completed' 
+                      ? 'bg-chart-2 text-background border-chart-2' 
+                      : stepStatus === 'current'
+                      ? 'bg-primary text-primary-foreground border-primary shadow-lg shadow-primary/25'
+                      : stepStatus === 'available'
+                      ? 'border-primary/30 text-muted-foreground hover:border-primary/50'
+                      : 'border-border text-muted-foreground/50'
+                  }`}>
+                    {stepStatus === 'completed' ? (
+                      <Check className="w-5 h-5" />
+                    ) : (
+                      <Icon className="w-5 h-5" />
+                    )}
+                  </div>
+                  <span className={`text-xs text-center font-medium ${
+                    stepStatus === 'current' ? 'text-primary' :
+                    stepStatus === 'completed' ? 'text-chart-2' :
+                    'text-muted-foreground'
+                  }`}>
+                    {step.title}
+                  </span>
+                </div>
+                {index < WIZARD_STEPS.length - 1 && (
+                  <div className={`w-16 h-0.5 mx-4 ${
+                    index < currentStepIndex ? 'bg-chart-2' : 'bg-border'
+                  }`} />
+                )}
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       <Card>
@@ -246,22 +293,22 @@ export default function DocumentsWizard({ onComplete, onCancel }: DocumentsWizar
                       key={step.id}
                       onClick={() => canNavigateToStep(step.id) && goToStep(step.id)}
                       disabled={!canNavigateToStep(step.id)}
-                      className={`w-full text-left p-4 rounded-lg transition-all ${
+                      className={`w-full text-left p-4 rounded-lg transition-all relative ${
                         stepStatus === 'current' 
-                          ? 'bg-primary text-primary-foreground' 
+                          ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/25 ring-2 ring-primary/20' 
                           : stepStatus === 'completed'
-                          ? 'bg-chart-2/10 text-chart-2 hover-elevate'
+                          ? 'bg-chart-2/10 text-chart-2 hover-elevate border-l-4 border-chart-2'
                           : stepStatus === 'available'
-                          ? 'hover-elevate'
+                          ? 'hover-elevate border border-border'
                           : 'opacity-50 cursor-not-allowed'
                       }`}
                       data-testid={`button-step-${step.id}`}
                     >
                       <div className="flex items-start space-x-3">
-                        <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                          stepStatus === 'completed' ? 'bg-chart-2 text-background' :
-                          stepStatus === 'current' ? 'bg-primary-foreground text-primary' :
-                          'bg-background text-muted-foreground'
+                        <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shadow-sm ${
+                          stepStatus === 'completed' ? 'bg-chart-2 text-background ring-2 ring-chart-2/30' :
+                          stepStatus === 'current' ? 'bg-primary-foreground text-primary ring-2 ring-primary-foreground/30' :
+                          'bg-background text-muted-foreground border border-border'
                         }`}>
                           {stepStatus === 'completed' ? <Check className="w-4 h-4" /> : step.stepNumber}
                         </div>

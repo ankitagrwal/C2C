@@ -1108,7 +1108,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`Starting AI test generation for document: ${document.filename}`);
       
       // Get any additional requirements from request body
-      const { requirements } = req.body || {};
+      const { requirements, aiProvider = 'gemini', aiModel } = req.body || {};
       
       let aiResult;
       try {
@@ -1118,7 +1118,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           document.filename, // Original filename
           documentId, // Document ID
           document.title || 'business_document', // Document type
-          requirements // Optional requirements
+          requirements, // Optional requirements
+          { provider: aiProvider, model: aiModel } // AI provider config
         );
         
         console.log(`AI processing completed. Generated ${aiResult.testCases.testCases.length} test cases in ${aiResult.testCases.processingTime}ms`);

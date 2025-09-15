@@ -1,12 +1,25 @@
 import OpenAI from 'openai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import mammoth from 'mammoth';
 import { parse } from 'node-html-parser';
 import crypto from 'crypto';
 
-// Initialize OpenAI client
+// Initialize AI clients
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
+
+// Initialize Gemini client with proper SDK
+// Only initialize if API key is available
+const gemini = process.env.GEMINI_API_KEY ? new GoogleGenerativeAI(process.env.GEMINI_API_KEY) : null;
+
+// AI Provider configuration
+export type AIProvider = 'openai' | 'gemini';
+
+export interface AIProviderConfig {
+  provider: AIProvider;
+  model?: string;
+}
 
 export interface DocumentChunk {
   id: string;
@@ -14,6 +27,13 @@ export interface DocumentChunk {
   embedding: number[];
   documentId: string;
   chunkIndex: number;
+}
+
+export interface DocumentMetadata {
+  customerName?: string;
+  documentType?: string;
+  industry?: string;
+  extractedAt: string;
 }
 
 export interface TestCaseGenerationResult {
@@ -26,8 +46,10 @@ export interface TestCaseGenerationResult {
     expectedResult: string;
     tags: string[];
   }>;
+  metadata: DocumentMetadata;
   contextUsed: string[];
   processingTime: number;
+  aiProvider: AIProvider;
 }
 
 /**
@@ -131,6 +153,69 @@ export async function generateEmbeddings(texts: string[]): Promise<number[][]> {
 }
 
 /**
+ * Extract document metadata using AI (customer name, document type, industry)
+ */
+export async function extractDocumentMetadata(
+  documentContent: string,
+  filename: string,
+  config: AIProviderConfig = { provider: 'gemini' }
+): Promise<DocumentMetadata> {
+  const prompt = `Analyze this business document and extract key metadata. Focus on identifying:
+
+1. CUSTOMER/COMPANY NAME: Look for the main organization name (often at the top, letterhead, or signature)
+2. DOCUMENT TYPE: Identify what kind of document this is (e.g., Employee Handbook, Policy Manual, Contract, etc.)
+3. INDUSTRY: Determine the business sector/industry based on content and context
+
+Document filename: ${filename}
+Document content:
+${documentContent.slice(0, 3000)}...
+
+Respond in JSON format:
+{
+  "customerName": "exact company name found in document or null",
+  "documentType": "specific document type or null",
+  "industry": "business industry category or null"
+}`;
+
+  try {
+    if (config.provider === 'gemini' && gemini) {
+      const model = gemini.getGenerativeModel({ model: config.model || "gemini-1.5-pro" });
+      const response = await model.generateContent([prompt]);
+      
+      const text = response.response.text();
+      const result = JSON.parse(text || '{}');
+      return {
+        customerName: result.customerName || undefined,
+        documentType: result.documentType || undefined,
+        industry: result.industry || undefined,
+        extractedAt: new Date().toISOString()
+      };
+    } else {
+      const response = await openai.chat.completions.create({
+        model: config.model || 'gpt-4-turbo-preview',
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0.1,
+        response_format: { type: 'json_object' }
+      });
+      
+      const result = JSON.parse(response.choices[0]?.message?.content || '{}');
+      return {
+        customerName: result.customerName || undefined,
+        documentType: result.documentType || undefined, 
+        industry: result.industry || undefined,
+        extractedAt: new Date().toISOString()
+      };
+    }
+  } catch (error) {
+    console.error('Error extracting document metadata:', error);
+    // Return partial metadata on error
+    return {
+      extractedAt: new Date().toISOString()
+    };
+  }
+}
+
+/**
  * Calculate cosine similarity between two vectors
  */
 export function cosineSimilarity(a: number[], b: number[]): number {
@@ -174,13 +259,14 @@ export function findRelevantChunks(
 }
 
 /**
- * Generate test cases using GPT-4 with RAG context
+ * Generate test cases using AI with RAG context
  */
 export async function generateTestCases(
   documentTitle: string,
   documentType: string,
   relevantChunks: DocumentChunk[],
-  requirements?: string
+  requirements?: string,
+  config: AIProviderConfig = { provider: 'gemini' }
 ): Promise<TestCaseGenerationResult> {
   const startTime = Date.now();
   
@@ -231,29 +317,49 @@ ${context}
 Generate test cases that thoroughly validate the requirements, processes, and potential failure scenarios described in this document.`;
 
   try {
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4-turbo-preview',
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt }
-      ],
-      temperature: 0.7,
-      max_tokens: 3000,
-      response_format: { type: 'json_object' }
-    });
+    let result: any;
+    let content: string;
 
-    const content = response.choices[0]?.message?.content;
-    if (!content) {
-      throw new Error('No content in OpenAI response');
+    if (config.provider === 'gemini' && gemini) {
+      const model = gemini.getGenerativeModel({ model: config.model || "gemini-1.5-pro" });
+      const prompt = `${systemPrompt}\n\n${userPrompt}`;
+      const response = await model.generateContent([prompt]);
+
+      content = response.response.text() || '';
+      if (!content) {
+        throw new Error('No content in Gemini response');
+      }
+    } else {
+      const response = await openai.chat.completions.create({
+        model: config.model || 'gpt-4-turbo-preview',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt }
+        ],
+        temperature: 0.7,
+        max_tokens: 3000,
+        response_format: { type: 'json_object' }
+      });
+
+      content = response.choices[0]?.message?.content || '';
+      if (!content) {
+        throw new Error('No content in OpenAI response');
+      }
     }
 
-    const result = JSON.parse(content);
+    result = JSON.parse(content);
     const processingTime = Date.now() - startTime;
+
+    // Extract metadata from document content
+    const extractedText = relevantChunks.map(chunk => chunk.content).join('\n');
+    const metadata = await extractDocumentMetadata(extractedText, documentTitle, config);
 
     return {
       testCases: result.testCases || [],
+      metadata,
       contextUsed: relevantChunks.map(chunk => `Chunk ${chunk.chunkIndex}: ${chunk.content.slice(0, 100)}...`),
-      processingTime
+      processingTime,
+      aiProvider: config.provider
     };
   } catch (error) {
     console.error('Error generating test cases:', error);
@@ -269,7 +375,8 @@ export async function processDocumentForTestGeneration(
   filename: string,
   documentId: string,
   documentType: string = 'business_document',
-  requirements?: string
+  requirements?: string,
+  config: AIProviderConfig = { provider: 'gemini' }
 ): Promise<{
   extractedText: string;
   chunks: DocumentChunk[];
@@ -309,9 +416,9 @@ export async function processDocumentForTestGeneration(
     // Step 6: Find relevant chunks using RAG
     const relevantChunks = findRelevantChunks(queryText, queryEmbedding, chunks);
     
-    // Step 7: Generate test cases using GPT-4
-    console.log('Generating test cases with AI...');
-    const testCases = await generateTestCases(filename, documentType, relevantChunks, requirements);
+    // Step 7: Generate test cases using AI
+    console.log(`Generating test cases with ${config.provider.toUpperCase()}...`);
+    const testCases = await generateTestCases(filename, documentType, relevantChunks, requirements, config);
 
     return {
       extractedText,
