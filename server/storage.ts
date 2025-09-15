@@ -24,6 +24,7 @@ export interface IStorage {
   // Customer operations
   getCustomers(): Promise<Customer[]>;
   getCustomer(id: string): Promise<Customer | undefined>;
+  getCustomerBySolutionId(solutionId: string): Promise<Customer | undefined>;
   createCustomer(customer: InsertCustomer): Promise<Customer>;
   updateCustomer(id: string, updates: Partial<Customer>): Promise<Customer>;
   deleteCustomer(id: string): Promise<void>;
@@ -91,6 +92,7 @@ export class MemStorage implements IStorage {
   // Placeholder implementations for other methods
   async getCustomers(): Promise<Customer[]> { return []; }
   async getCustomer(id: string): Promise<Customer | undefined> { return undefined; }
+  async getCustomerBySolutionId(solutionId: string): Promise<Customer | undefined> { return undefined; }
   async createCustomer(customer: InsertCustomer): Promise<Customer> { 
     throw new Error("Not implemented in MemStorage"); 
   }

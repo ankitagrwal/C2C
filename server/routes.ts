@@ -476,6 +476,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Customer lookup by solution ID
+  app.get('/api/customers/by-solution-id/:solutionId', requireAuth, async (req, res) => {
+    try {
+      const { solutionId } = req.params;
+      
+      if (!solutionId || solutionId.trim().length === 0) {
+        return res.status(400).json({
+          error: 'Solution ID is required',
+          code: 'VALIDATION_ERROR'
+        });
+      }
+
+      const customer = await storage.getCustomerBySolutionId(solutionId);
+      if (!customer) {
+        return res.status(404).json({ 
+          error: 'No customer found with this solution ID',
+          code: 'NOT_FOUND' 
+        });
+      }
+      
+      res.json(customer);
+    } catch (error) {
+      return handleDatabaseError(error, res, 'lookup customer by solution ID');
+    }
+  });
+
   app.post('/api/customers', requireAuth, requireCSRFToken, requireAdmin, async (req, res) => {
     try {
       const validatedData = insertCustomerSchema.parse(req.body);
