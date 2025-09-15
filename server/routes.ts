@@ -290,12 +290,31 @@ const validateFileContent = (buffer: Buffer): boolean => {
   return true;
 };
 
-// Configure enhanced multer for file uploads
+// Configure multer for single file uploads
 const upload = multer({ 
   storage: multer.memoryStorage(),
   limits: { 
     fileSize: 10 * 1024 * 1024, // 10MB limit
     files: 1 // Only one file at a time
+  },
+  fileFilter: (req: Request, file: Express.Multer.File, cb: FileFilterCallback) => {
+    try {
+      if (!validateFileType(file)) {
+        return cb(new Error('Invalid file type. Only PDF, DOCX, and TXT files are allowed.'));
+      }
+      cb(null, true);
+    } catch (error) {
+      cb(new Error('File validation failed'));
+    }
+  }
+});
+
+// Configure dedicated multer instance for wizard batch uploads
+const batchUpload = multer({ 
+  storage: multer.memoryStorage(),
+  limits: { 
+    fileSize: 20 * 1024 * 1024, // 20MB limit per file for wizard
+    files: 5 // Maximum 5 files for batch upload
   },
   fileFilter: (req: Request, file: Express.Multer.File, cb: FileFilterCallback) => {
     try {
@@ -966,6 +985,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       for (const testCaseData of importData.testCases) {
         const insertData = {
+          title: testCaseData.content.split('\n')[0].slice(0, 100) || 'Imported Test Case', // Use first line as title
           content: testCaseData.content,
           category: testCaseData.category,
           source: testCaseData.source,
@@ -1100,11 +1120,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         try {
           const testCaseData = {
             documentId,
+            title: aiTestCase.title, // Use AI-generated title
             content: `${aiTestCase.title}\n\nDescription: ${aiTestCase.description}\n\nSteps:\n${aiTestCase.steps.map((step, idx) => `${idx + 1}. ${step}`).join('\n')}\n\nExpected Result: ${aiTestCase.expectedResult}`,
             category: aiTestCase.category === 'functional' ? 'Functional Tests' :
                      aiTestCase.category === 'compliance' ? 'Compliance Tests' :
                      aiTestCase.category === 'integration' ? 'Integration Tests' :
                      'Edge Cases',
+            priority: aiTestCase.priority, // Add priority from AI-generated data
             source: 'generated' as const,
             confidenceScore: aiTestCase.priority === 'high' ? 0.9 : 
                            aiTestCase.priority === 'medium' ? 0.75 : 0.6,
@@ -1178,6 +1200,421 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(stats);
     } catch (error) {
       return handleDatabaseError(error, res, 'fetch stats');
+    }
+  });
+
+  // ===================
+  // WIZARD API ROUTES
+  // ===================
+
+  // Step 1: Batch document upload for wizard (max 5 files, 20MB each)
+  app.post('/api/documents/upload-batch', requireAuth, requireCSRFToken, 
+    batchUpload.array('documents', 5), // Use dedicated batch upload instance
+    async (req: AuthenticatedRequest, res) => {
+      try {
+        if (!req.files || req.files.length === 0) {
+          return res.status(400).json({ 
+            error: 'No files uploaded',
+            code: 'MISSING_FILES' 
+          });
+        }
+
+        const files = req.files as Express.Multer.File[];
+        
+        // Note: File size validation is now handled by multer limits (20MB per file)
+        // Additional validation can be added here if needed
+
+        const validatedData = z.object({
+          docType: z.string().min(1),
+          customerId: z.string().refine((val) => {
+            // Allow null, undefined, empty string, 'demo', or valid UUID
+            return !val || val === 'demo' || z.string().uuid().safeParse(val).success;
+          }, "Customer ID must be a valid UUID, 'demo', or empty for demo mode").optional()
+        }).parse(req.body);
+
+        // Validate customer exists if customerId is provided (skip for demo mode)
+        if (validatedData.customerId && validatedData.customerId !== 'demo') {
+          const customer = await storage.getCustomer(validatedData.customerId);
+          if (!customer) {
+            return res.status(404).json({ 
+              error: 'Customer not found',
+              code: 'CUSTOMER_NOT_FOUND' 
+            });
+          }
+        }
+
+        const createdDocuments = [];
+        
+        for (const file of files) {
+          // Validate file content
+          if (!validateFileContent(file.buffer)) {
+            return res.status(400).json({ 
+              error: `Invalid file content in ${file.originalname}`,
+              code: 'INVALID_FILE_CONTENT' 
+            });
+          }
+
+          // Extract text content
+          let content = '';
+          const fileExt = file.originalname.toLowerCase().slice(file.originalname.lastIndexOf('.'));
+          
+          if (fileExt === '.txt') {
+            content = file.buffer.toString('utf-8');
+          } else {
+            content = `[${fileExt.toUpperCase()} File Content - Processing Required]`;
+          }
+
+          const documentData = {
+            customerId: (validatedData.customerId === 'demo' || !validatedData.customerId) ? null : validatedData.customerId,
+            filename: file.originalname,
+            content,
+            docType: validatedData.docType,
+            fileSize: file.size,
+            status: 'uploaded'
+          };
+
+          const document = await storage.createDocument(documentData);
+          createdDocuments.push(document);
+        }
+
+        res.status(201).json({
+          documents: createdDocuments,
+          count: createdDocuments.length,
+          message: `Successfully uploaded ${createdDocuments.length} documents`
+        });
+
+      } catch (error) {
+        if (error instanceof z.ZodError) {
+          return res.status(400).json({ 
+            error: 'Invalid upload data', 
+            details: error.errors,
+            code: 'VALIDATION_ERROR'
+          });
+        }
+        console.error('Batch upload error:', error);
+        return handleDatabaseError(error, res, 'batch upload documents');
+      }
+    }
+  );
+
+  // Step 2: Start processing multiple documents for test generation
+  app.post('/api/documents/process-batch', requireAuth, requireCSRFToken, async (req: AuthenticatedRequest, res) => {
+    try {
+      const validatedData = z.object({
+        documentIds: z.array(z.string().uuid()),
+        targetMin: z.number().min(20).default(80),
+        targetMax: z.number().max(150).default(120),
+        industry: z.string().optional()
+      }).parse(req.body);
+
+      const jobs = [];
+      
+      for (const documentId of validatedData.documentIds) {
+        // Verify document exists
+        const document = await storage.getDocument(documentId);
+        if (!document) {
+          return res.status(404).json({ 
+            error: `Document not found: ${documentId}`,
+            code: 'NOT_FOUND' 
+          });
+        }
+
+        // Create processing job
+        const job = await storage.createProcessingJob({
+          documentId,
+          jobType: 'test_generation',
+          status: 'pending',
+          progress: 0,
+          totalItems: Math.floor(Math.random() * (validatedData.targetMax - validatedData.targetMin) + validatedData.targetMin) // Random target between min-max
+        });
+
+        jobs.push(job);
+      }
+
+      res.status(201).json({
+        jobs,
+        message: `Started processing ${jobs.length} documents`,
+        totalJobs: jobs.length
+      });
+
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          error: 'Invalid processing request', 
+          details: error.errors,
+          code: 'VALIDATION_ERROR'
+        });
+      }
+      return handleDatabaseError(error, res, 'start batch processing');
+    }
+  });
+
+  // Get job status with progress tracking
+  app.get('/api/jobs/:id', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const jobId = z.string().uuid().parse(req.params.id);
+      const job = await storage.getProcessingJob(jobId);
+      
+      if (!job) {
+        return res.status(404).json({ 
+          error: 'Job not found',
+          code: 'NOT_FOUND' 
+        });
+      }
+
+      // Simulate progress for demo (in production, this would be real progress)
+      if (job.status === 'pending') {
+        await storage.updateProcessingJob(jobId, {
+          status: 'processing',
+          progress: Math.floor(Math.random() * 30) + 10 // 10-40% initial progress
+        });
+      }
+
+      res.json(job);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          error: 'Invalid job ID format', 
+          details: error.errors,
+          code: 'VALIDATION_ERROR'
+        });
+      }
+      return handleDatabaseError(error, res, 'fetch job status');
+    }
+  });
+
+  // Step 3: Download CSV template for manual test case entry
+  app.get('/api/test-cases/template.csv', requireAuth, (req: AuthenticatedRequest, res) => {
+    const industry = req.query.industry as string || 'General';
+    
+    const csvTemplate = `title,description,category,priority,preconditions,steps,expected_result,source
+"Login Functionality Test","Verify user can login with valid credentials","Functional","high","User has valid account","1. Navigate to login page\n2. Enter username and password\n3. Click login button","User is successfully logged in","manual"
+"Password Reset Test","Verify password reset functionality","Functional","medium","User account exists","1. Click forgot password\n2. Enter email address\n3. Check email for reset link","Reset email is received","manual"
+"Data Validation Test","Verify form validates required fields","Compliance","high","Form is accessible","1. Leave required field empty\n2. Submit form","Error message appears","manual"
+"Performance Load Test","Verify system handles expected load","Performance","medium","Test environment ready","1. Simulate 100 concurrent users\n2. Monitor response times","Response time under 2 seconds","manual"
+"${industry} Specific Test","Industry-specific functionality test","Integration","medium","${industry} module configured","1. Access ${industry.toLowerCase()} features\n2. Perform typical workflow","Workflow completes successfully","manual"`;
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename="test-cases-template-${industry.toLowerCase()}.csv"`);
+    res.send(csvTemplate);
+  });
+
+  // Step 3: Upload CSV file with manual test cases
+  app.post('/api/test-cases/upload-csv', requireAuth, requireCSRFToken,
+    upload.single('file'),
+    async (req: AuthenticatedRequest, res) => {
+      try {
+        if (!req.file) {
+          return res.status(400).json({ 
+            error: 'No CSV file uploaded',
+            code: 'MISSING_FILE' 
+          });
+        }
+
+        const validatedData = z.object({
+          documentId: z.string().uuid().optional()
+        }).parse(req.body);
+
+        const csvContent = req.file.buffer.toString('utf-8');
+        const lines = csvContent.split('\n').filter(line => line.trim());
+        
+        if (lines.length < 2) {
+          return res.status(400).json({ 
+            error: 'CSV file must contain header row and at least one data row',
+            code: 'INVALID_CSV_FORMAT' 
+          });
+        }
+
+        const headers = lines[0].split(',').map(h => h.replace(/"/g, '').trim());
+        const requiredHeaders = ['title', 'description', 'category', 'priority'];
+        
+        for (const required of requiredHeaders) {
+          if (!headers.includes(required)) {
+            return res.status(400).json({ 
+              error: `Missing required CSV column: ${required}`,
+              code: 'MISSING_CSV_COLUMN' 
+            });
+          }
+        }
+
+        const createdTestCases = [];
+        const errors = [];
+
+        for (let i = 1; i < lines.length; i++) {
+          try {
+            const values = lines[i].split(',').map(v => v.replace(/"/g, '').trim());
+            const rowData: { [key: string]: string } = {};
+            
+            headers.forEach((header, idx) => {
+              rowData[header] = values[idx] || '';
+            });
+
+            if (!rowData['title'] || !rowData['description']) {
+              errors.push(`Row ${i + 1}: Missing title or description`);
+              continue;
+            }
+
+            const testCaseData = {
+              documentId: validatedData.documentId || null,
+              title: rowData['title'],
+              content: `${rowData['title']}\n\nDescription: ${rowData['description']}\n\nPreconditions: ${rowData['preconditions'] || 'None'}\n\nSteps:\n${rowData['steps'] || 'See description'}\n\nExpected Result: ${rowData['expected_result'] || 'See description'}`,
+              category: rowData['category'] || 'Manual',
+              priority: ['low', 'medium', 'high'].includes(rowData['priority']?.toLowerCase()) ? rowData['priority'].toLowerCase() : 'medium',
+              source: 'manual'
+            };
+
+            const testCase = await storage.createTestCase(testCaseData);
+            createdTestCases.push(testCase);
+          } catch (rowError) {
+            errors.push(`Row ${i + 1}: ${rowError instanceof Error ? rowError.message : 'Processing error'}`);
+          }
+        }
+
+        res.json({
+          message: `Processed ${createdTestCases.length} test cases from CSV`,
+          created: createdTestCases.length,
+          errors: errors,
+          testCases: createdTestCases
+        });
+
+      } catch (error) {
+        if (error instanceof z.ZodError) {
+          return res.status(400).json({ 
+            error: 'Invalid CSV upload data', 
+            details: error.errors,
+            code: 'VALIDATION_ERROR'
+          });
+        }
+        console.error('CSV upload error:', error);
+        return handleDatabaseError(error, res, 'upload CSV test cases');
+      }
+    }
+  );
+
+  // Step 4: Get paginated test cases with filters for review
+  app.get('/api/test-cases/paginated', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const validatedQuery = z.object({
+        documentId: z.string().uuid().optional(),
+        page: z.coerce.number().min(1).default(1),
+        pageSize: z.coerce.number().min(10).max(200).default(50),
+        category: z.string().optional(),
+        priority: z.enum(['low', 'medium', 'high']).optional(),
+        source: z.enum(['generated', 'manual', 'uploaded']).optional()
+      }).parse(req.query);
+
+      // Get all test cases and filter/paginate in memory for development
+      let testCases = await storage.getTestCases(validatedQuery.documentId);
+      
+      // Apply filters
+      if (validatedQuery.category) {
+        testCases = testCases.filter(tc => tc.category === validatedQuery.category);
+      }
+      if (validatedQuery.priority) {
+        testCases = testCases.filter(tc => tc.priority === validatedQuery.priority);
+      }
+      if (validatedQuery.source) {
+        testCases = testCases.filter(tc => tc.source === validatedQuery.source);
+      }
+      
+      const total = testCases.length;
+      const startIndex = (validatedQuery.page - 1) * validatedQuery.pageSize;
+      const endIndex = startIndex + validatedQuery.pageSize;
+      const paginatedTestCases = testCases.slice(startIndex, endIndex);
+      
+      res.json({
+        testCases: paginatedTestCases,
+        total: total,
+        page: validatedQuery.page,
+        pageSize: validatedQuery.pageSize,
+        totalPages: Math.ceil(total / validatedQuery.pageSize)
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          error: 'Invalid query parameters', 
+          details: error.errors,
+          code: 'VALIDATION_ERROR'
+        });
+      }
+      return handleDatabaseError(error, res, 'fetch paginated test cases');
+    }
+  });
+
+  // Step 4: Final submission with customer validation
+  app.post('/api/test-cases/submit', requireAuth, requireCSRFToken, async (req: AuthenticatedRequest, res) => {
+    try {
+      const validatedData = z.object({
+        documentId: z.string().uuid(),
+        customer: z.object({
+          id: z.string().uuid().optional(),
+          name: z.string().min(1).optional(),
+          industry: z.string().min(1).optional(),
+          solutionId: z.string().min(1).optional()
+        }),
+        selectedTestCaseIds: z.array(z.string().uuid()).min(1)
+      }).parse(req.body);
+
+      // Validate customer information
+      let customerId: string;
+      
+      if (validatedData.customer.id) {
+        // Use existing customer
+        const customer = await storage.getCustomer(validatedData.customer.id);
+        if (!customer) {
+          return res.status(404).json({ 
+            error: 'Selected customer not found',
+            code: 'CUSTOMER_NOT_FOUND' 
+          });
+        }
+        customerId = customer.id;
+      } else {
+        // Create new customer (all fields required)
+        if (!validatedData.customer.name || !validatedData.customer.industry || !validatedData.customer.solutionId) {
+          return res.status(400).json({ 
+            error: 'Customer name, industry, and solution ID are required for new customers',
+            code: 'MISSING_CUSTOMER_INFO' 
+          });
+        }
+
+        const newCustomer = await storage.createCustomer({
+          name: validatedData.customer.name,
+          industry: validatedData.customer.industry,
+          solutionId: validatedData.customer.solutionId,
+          isConfigured: true
+        });
+        customerId = newCustomer.id;
+      }
+
+      // Update document with customer
+      await storage.updateDocument(validatedData.documentId, { customerId });
+
+      // Update selected test cases
+      const updatedTestCases = [];
+      for (const testCaseId of validatedData.selectedTestCaseIds) {
+        const updatedTestCase = await storage.updateTestCase(testCaseId, {
+          executionStatus: 'ready'
+        });
+        updatedTestCases.push(updatedTestCase);
+      }
+
+      res.json({
+        message: 'Test cases submitted successfully',
+        customerId,
+        documentId: validatedData.documentId,
+        testCasesCount: updatedTestCases.length,
+        testCases: updatedTestCases
+      });
+
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          error: 'Invalid submission data', 
+          details: error.errors,
+          code: 'VALIDATION_ERROR'
+        });
+      }
+      return handleDatabaseError(error, res, 'submit test cases');
     }
   });
 
