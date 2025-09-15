@@ -4,7 +4,7 @@ import LoginForm from "../auth/LoginForm";
 import MainLayout from "../layout/MainLayout";
 import DashboardOverview from "../dashboard/DashboardOverview";
 import InternalToolsManager from "../tools/InternalToolsManager";
-import Documents from "@/pages/Documents";
+import DocumentsWizard from "@/components/documents/DocumentsWizard";
 import TestCaseManager from "../testcases/TestCaseManager";
 import { insertUserSchema } from "@shared/schema";
 import { z } from "zod";
@@ -171,7 +171,7 @@ export default function Clause2CaseApp() {
             <p className="text-muted-foreground">Customer management coming soon...</p>
           </div>
         </Route>
-        <Route path="/documents" component={Documents} />
+        <Route path="/documents" component={DocumentsWizard} />
         <Route path="/test-cases" component={TestCaseManager} />
         <Route path="/ai-processing">
           <div className="text-center py-12">

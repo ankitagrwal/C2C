@@ -6,6 +6,12 @@ import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
 import type { Document, ProcessingJob, TestCase } from '@shared/schema';
 
+// Import step components
+import UploadStep from './UploadStep';
+import ProcessingStep from './ProcessingStep';
+import ManualCSVStep from './ManualCSVStep';
+import ReviewSubmitStep from './ReviewSubmitStep';
+
 // Wizard Step Types
 export type WizardStep = 'upload' | 'processing' | 'manual' | 'review';
 
@@ -135,146 +141,68 @@ export default function DocumentsWizard({ onComplete, onCancel }: DocumentsWizar
     switch (wizardState.currentStep) {
       case 'upload':
         return (
-          <div className="space-y-6">
-            <div className="text-center py-8">
-              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-primary/10 flex items-center justify-center">
-                <FileText className="w-8 h-8 text-primary" />
-              </div>
-              <h3 className="text-xl font-semibold mb-2">Upload Your Documents</h3>
-              <p className="text-muted-foreground mb-6">
-                Upload up to 5 business documents (PDF, DOC, DOCX, TXT) - 20MB max per file
-              </p>
-            </div>
-            
-            {/* TODO: UploadStep component will go here */}
-            <div className="border-2 border-dashed border-border rounded-lg p-8 text-center">
-              <p className="text-sm text-muted-foreground">
-                Upload component will be implemented in next step
-              </p>
-            </div>
-
-            <div className="flex justify-between">
-              <Button variant="outline" onClick={onCancel} data-testid="button-cancel">
-                Cancel
-              </Button>
-              <Button 
-                onClick={goToNextStep} 
-                disabled={!canNavigateToStep('processing')}
-                data-testid="button-next-upload"
-              >
-                Start Processing
-              </Button>
-            </div>
-          </div>
+          <UploadStep 
+            onComplete={(documents) => {
+              handleStepComplete({ 
+                uploadedDocuments: documents,
+                currentStep: 'processing'
+              });
+            }}
+            initialDocuments={wizardState.uploadedDocuments}
+            docType="Business Document"
+            customerId={wizardState.customer.id || null}
+          />
         );
       
       case 'processing':
         return (
-          <div className="space-y-6">
-            <div className="text-center py-8">
-              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-chart-3/10 flex items-center justify-center">
-                <Bot className="w-8 h-8 text-chart-3 animate-pulse" />
-              </div>
-              <h3 className="text-xl font-semibold mb-2">AI Test Case Generation</h3>
-              <p className="text-muted-foreground mb-6">
-                Our AI is analyzing your documents and generating 80-120 comprehensive test cases
-              </p>
-            </div>
-
-            {/* TODO: ProcessingStep component will go here */}
-            <div className="space-y-4">
-              <div className="text-center">
-                <p className="text-sm text-muted-foreground mb-4">
-                  Processing component will be implemented in next step
-                </p>
-                <Progress value={0} className="w-full" />
-              </div>
-            </div>
-
-            <div className="flex justify-between">
-              <Button variant="outline" onClick={goToPreviousStep} data-testid="button-back-processing">
-                Back
-              </Button>
-              <Button 
-                variant="outline" 
-                onClick={() => canNavigateToStep('manual') && goToStep('manual')}
-                disabled={!canNavigateToStep('manual')}
-                data-testid="button-skip-to-manual"
-              >
-                Skip to Manual Addition
-              </Button>
-            </div>
-          </div>
+          <ProcessingStep 
+            documents={wizardState.uploadedDocuments}
+            onComplete={(testCases, jobs) => {
+              handleStepComplete({
+                processingJobs: jobs,
+                allTestCases: [...wizardState.manualTestCases, ...testCases],
+                currentStep: 'manual'
+              });
+            }}
+            initialJobs={wizardState.processingJobs}
+            targetMin={80}
+            targetMax={120}
+            industry={wizardState.customer.industry}
+          />
         );
 
       case 'manual':
         return (
-          <div className="space-y-6">
-            <div className="text-center py-8">
-              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-chart-2/10 flex items-center justify-center">
-                <FileSpreadsheet className="w-8 h-8 text-chart-2" />
-              </div>
-              <h3 className="text-xl font-semibold mb-2">Add Manual Test Cases</h3>
-              <p className="text-muted-foreground mb-6">
-                Download our CSV template and add your own custom test cases
-              </p>
-            </div>
-
-            {/* TODO: ManualCSVStep component will go here */}
-            <div className="space-y-4">
-              <div className="text-center p-8 border rounded-lg">
-                <p className="text-sm text-muted-foreground">
-                  Manual CSV component will be implemented in next step
-                </p>
-              </div>
-            </div>
-
-            <div className="flex justify-between">
-              <Button variant="outline" onClick={goToPreviousStep} data-testid="button-back-manual">
-                Back
-              </Button>
-              <Button 
-                onClick={goToNextStep} 
-                disabled={!canNavigateToStep('review')}
-                data-testid="button-next-manual"
-              >
-                Continue to Review
-              </Button>
-            </div>
-          </div>
+          <ManualCSVStep 
+            onComplete={(testCases) => {
+              const updatedManualTestCases = [...wizardState.manualTestCases, ...testCases];
+              const processingTestCases = wizardState.allTestCases.filter(tc => 
+                !wizardState.manualTestCases.some(mtc => mtc.id === tc.id)
+              );
+              handleStepComplete({
+                manualTestCases: updatedManualTestCases,
+                allTestCases: [...processingTestCases, ...updatedManualTestCases],
+                currentStep: 'review'
+              });
+            }}
+            initialTestCases={wizardState.manualTestCases}
+            industry={wizardState.customer.industry || 'General'}
+            documentId={wizardState.uploadedDocuments[0]?.id}
+          />
         );
 
       case 'review':
         return (
-          <div className="space-y-6">
-            <div className="text-center py-8">
-              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-primary/10 flex items-center justify-center">
-                <CheckCircle className="w-8 h-8 text-primary" />
-              </div>
-              <h3 className="text-xl font-semibold mb-2">Review & Submit</h3>
-              <p className="text-muted-foreground mb-6">
-                Review all generated and manual test cases, then submit for validation
-              </p>
-            </div>
-
-            {/* TODO: ReviewSubmitStep component will go here */}
-            <div className="space-y-4">
-              <div className="text-center p-8 border rounded-lg">
-                <p className="text-sm text-muted-foreground">
-                  Review and submit component will be implemented in next step
-                </p>
-              </div>
-            </div>
-
-            <div className="flex justify-between">
-              <Button variant="outline" onClick={goToPreviousStep} data-testid="button-back-review">
-                Back
-              </Button>
-              <Button onClick={() => onComplete(wizardState)} data-testid="button-submit">
-                Submit Test Cases
-              </Button>
-            </div>
-          </div>
+          <ReviewSubmitStep 
+            testCases={wizardState.allTestCases}
+            onComplete={() => {
+              onComplete(wizardState);
+            }}
+            initialCustomer={wizardState.customer}
+            documentIds={wizardState.uploadedDocuments.map(doc => doc.id)}
+            industry={wizardState.customer.industry || 'General'}
+          />
         );
 
       default:
