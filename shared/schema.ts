@@ -41,7 +41,7 @@ export const customers = pgTable("customers", {
 // Document storage
 export const documents = pgTable("documents", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  customerId: varchar("customer_id").references(() => customers.id),
+  customerId: varchar("customer_id").references(() => customers.id), // Nullable for demo mode
   filename: text("filename").notNull(),
   content: text("content"),
   docType: text("doc_type"), // 'Contract', 'Handbook', 'Tax Filing', etc.

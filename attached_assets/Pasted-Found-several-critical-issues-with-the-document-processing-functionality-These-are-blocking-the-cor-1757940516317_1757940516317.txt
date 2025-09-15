@@ -1,0 +1,59 @@
+Found several critical issues with the document processing functionality. These are blocking the core workflow:
+🚨 Critical Document Issues
+1. Browse Files Button - Not Working
+
+Issue: "Browse Files" button is completely non-functional
+Expected: Opens file picker dialog for .pdf/.docx/.txt selection
+Impact: Users can only try drag-drop, no alternative method
+
+2. File Upload Failing - 503 Service Unavailable
+
+Issue: Getting "Upload failed: 503 - Service Unavailable" error
+Expected: Successful file upload with progress indicator
+Impact: No files can be uploaded at all - complete blocker
+
+3. Document Parsing Not Working
+
+Issue: System cannot extract basic information from uploaded files
+Expected: Auto-extract from document (especially first page):
+
+Company name (e.g., "TechCorp Inc")
+Company type (e.g., "Restaurant", "Technology", etc.)
+Document type (Contract, Handbook, Agreement, etc.)
+
+
+Current: No parsing happening - data extraction fails completely
+
+🎯 Expected Smart Workflow
+User should be able to:
+
+Upload via Browse OR Drag-drop (both should work)
+Auto-parse document and extract:
+
+   ✅ Company: [Extracted from doc]
+   ✅ Industry: [Extracted from doc] 
+   ✅ Doc Type: [Extracted from doc]
+
+Smart customer matching:
+
+If customer exists → proceed to test generation
+If customer doesn't exist → show auto-creation prompt with extracted details
+
+
+
+🔧 Immediate Fixes Needed
+Priority 1: Fix 503 error - nothing works without file upload
+Priority 2: Fix Browse Files button - critical UX issue
+Priority 3: Implement document parsing - core intelligence feature
+📄 Test Case
+I have a sample restaurant document where:
+
+Company name is clearly visible on first page
+Industry type "Restaurant" is mentioned on first page
+Document type can be inferred from content
+
+This should auto-extract and either match existing customer or prompt for customer creation.
+⏰ Urgency
+These issues are completely blocking the demo workflow. Without working file upload and parsing, we can't demonstrate any of the AI capabilities.
+Can you prioritize the 503 error fix first, then the parsing logic?
+Let me know if you need the sample document or more details about expected parsing behavior.

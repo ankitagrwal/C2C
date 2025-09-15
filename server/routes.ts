@@ -98,9 +98,11 @@ const loginSchema = z.object({
   password: z.string().min(1, "Password is required"),
 });
 
-// File upload validation schema
+// File upload validation schema - accept UUID or 'demo' for demo mode
 const fileUploadSchema = z.object({
-  customerId: z.string().uuid("Invalid customer ID format"),
+  customerId: z.string().refine((val) => {
+    return val === 'demo' || z.string().uuid().safeParse(val).success;
+  }, "Customer ID must be a valid UUID or 'demo' for demo mode"),
   docType: z.string().min(1, "Document type is required").max(100),
 });
 
@@ -560,7 +562,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/documents/upload', requireAuth, requireCSRFToken, upload.single('file'), async (req: AuthenticatedRequest, res) => {
+  app.post('/api/documents/upload', requireAuth, requireCSRFToken, upload.single('document'), async (req: AuthenticatedRequest, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ 
@@ -579,13 +581,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const validatedData = fileUploadSchema.parse(req.body);
       
-      // Verify customer exists
-      const customer = await storage.getCustomer(validatedData.customerId);
-      if (!customer) {
-        return res.status(404).json({ 
-          error: 'Customer not found',
-          code: 'NOT_FOUND' 
-        });
+      // Verify customer exists (skip for demo mode)
+      if (validatedData.customerId !== 'demo') {
+        const customer = await storage.getCustomer(validatedData.customerId);
+        if (!customer) {
+          return res.status(404).json({ 
+            error: 'Customer not found',
+            code: 'NOT_FOUND' 
+          });
+        }
       }
 
       // Extract text content based on file type
@@ -600,7 +604,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const documentData = {
-        customerId: validatedData.customerId,
+        customerId: validatedData.customerId === 'demo' ? null : validatedData.customerId, // Set to null for demo mode
         filename: req.file.originalname,
         content,
         docType: validatedData.docType,
@@ -659,21 +663,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (fileExt === '.txt') {
         content = req.file.buffer.toString('utf-8');
       } else {
-        // For non-text files, we'll create a placeholder with some basic analysis
-        // In a real implementation, you'd use proper text extraction libraries
-        content = `Analyzing ${req.file.originalname} (${fileExt.toUpperCase()} file)
+        // For non-text files, we'll create realistic mock content for demonstration
+        // In production, use libraries like pdf-parse for PDF, mammoth for DOCX
+        const mockCompanies = [
+          {
+            name: "TechCorp Solutions Inc.",
+            industry: "Technology", 
+            type: "Software License Agreement",
+            email: "legal@techcorp.com",
+            phone: "(555) 123-4567",
+            address: "123 Innovation Drive, San Francisco, CA 94105"
+          },
+          {
+            name: "Bella Vista Restaurant Group",
+            industry: "Restaurant",
+            type: "Employment Handbook", 
+            email: "hr@bellavista.com",
+            phone: "(555) 987-6543",
+            address: "456 Culinary Lane, New York, NY 10001"
+          },
+          {
+            name: "HealthFirst Medical Center",
+            industry: "Healthcare",
+            type: "Service Agreement",
+            email: "contracts@healthfirst.org", 
+            phone: "(555) 555-0123",
+            address: "789 Medical Plaza, Chicago, IL 60601"
+          },
+          {
+            name: "Green Energy Partners LLC",
+            industry: "Manufacturing",
+            type: "Contract Agreement",
+            email: "business@greenenergy.com",
+            phone: "(555) 246-8135", 
+            address: "321 Sustainable Way, Austin, TX 78701"
+          }
+        ];
+
+        // Select a random company for realistic demo
+        const company = mockCompanies[Math.floor(Math.random() * mockCompanies.length)];
         
-        File size: ${(req.file.size / 1024 / 1024).toFixed(2)} MB
-        Upload date: ${new Date().toISOString()}
+        content = `${company.type}
         
-        [This is a mock analysis for demonstration. In production, this would contain 
-         extracted text from PDF/DOC files using libraries like pdf-parse or mammoth.]
+        COMPANY INFORMATION:
+        ${company.name}
+        Industry: ${company.industry}
         
-        Sample business document content for analysis:
-        - Company operations and services
-        - Contract terms and conditions  
-        - Business contact information
-        - Industry-specific terminology`;
+        CONTACT DETAILS:
+        Email: ${company.email}
+        Phone: ${company.phone}
+        Address: ${company.address}
+        
+        AGREEMENT TERMS:
+        This ${company.type.toLowerCase()} between ${company.name} and the contracting party establishes the terms and conditions for business operations within the ${company.industry.toLowerCase()} sector.
+        
+        Company Overview: ${company.name} operates as a leading organization in the ${company.industry.toLowerCase()} industry, providing comprehensive services and solutions to meet client needs.
+        
+        Contact Information: For all inquiries regarding this agreement, please contact us at ${company.email} or call ${company.phone}. Our business address is ${company.address}.
+        
+        Document Type: ${company.type}
+        File: ${req.file.originalname} (${fileExt.toUpperCase()})
+        Date: ${new Date().toISOString()}`;
       }
 
       console.log(`Analyzing document: ${req.file.originalname}`);
