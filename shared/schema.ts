@@ -57,6 +57,7 @@ export const processingJobs = pgTable("processing_jobs", {
   status: text("status").default("pending"), // 'pending', 'processing', 'completed', 'failed'
   jobType: text("job_type").notNull(), // 'text_extraction', 'test_generation', 'embedding'
   progress: integer("progress").default(0),
+  totalItems: integer("total_items"), // Expected number of items for wizard progress tracking
   errorMessage: text("error_message"),
   result: jsonb("result"),
   createdAt: timestamp("created_at").default(sql`now()`),
@@ -67,8 +68,10 @@ export const processingJobs = pgTable("processing_jobs", {
 export const testCases = pgTable("test_cases", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   documentId: varchar("document_id").references(() => documents.id),
+  title: text("title").notNull(), // Test case title for wizard
   content: text("content").notNull(),
   category: text("category"), // 'Functional', 'Compliance', 'Edge Cases', 'Integration'
+  priority: text("priority").default("medium"), // 'low', 'medium', 'high' for wizard
   source: text("source").default("generated"), // 'generated', 'uploaded', 'manual'
   confidenceScore: real("confidence_score"),
   contextUsed: text("context_used"), // RAG context that was used

@@ -32,13 +32,23 @@ export interface IStorage {
   getDocuments(customerId?: string): Promise<Document[]>;
   getDocument(id: string): Promise<Document | undefined>;
   createDocument(document: InsertDocument): Promise<Document>;
+  createDocuments(documents: InsertDocument[]): Promise<Document[]>;
   updateDocument(id: string, updates: Partial<Document>): Promise<Document>;
   deleteDocument(id: string): Promise<void>;
   
   // Test case operations
   getTestCases(documentId?: string): Promise<TestCase[]>;
+  getTestCasesPaginated(options: {
+    documentId?: string;
+    page?: number;
+    pageSize?: number;
+    category?: string;
+    priority?: string;
+    source?: string;
+  }): Promise<{ testCases: TestCase[]; total: number; }>;
   getTestCase(id: string): Promise<TestCase | undefined>;
   createTestCase(testCase: InsertTestCase): Promise<TestCase>;
+  createTestCases(testCases: InsertTestCase[]): Promise<TestCase[]>;
   updateTestCase(id: string, updates: Partial<TestCase>): Promise<TestCase>;
   deleteTestCase(id: string): Promise<void>;
   
@@ -94,15 +104,31 @@ export class MemStorage implements IStorage {
   async createDocument(document: InsertDocument): Promise<Document> { 
     throw new Error("Not implemented in MemStorage"); 
   }
+  async createDocuments(documents: InsertDocument[]): Promise<Document[]> {
+    throw new Error("Not implemented in MemStorage");
+  }
   async updateDocument(id: string, updates: Partial<Document>): Promise<Document> { 
     throw new Error("Not implemented in MemStorage"); 
   }
   async deleteDocument(id: string): Promise<void> {}
   
   async getTestCases(documentId?: string): Promise<TestCase[]> { return []; }
+  async getTestCasesPaginated(options: {
+    documentId?: string;
+    page?: number;
+    pageSize?: number;
+    category?: string;
+    priority?: string;
+    source?: string;
+  }): Promise<{ testCases: TestCase[]; total: number; }> {
+    return { testCases: [], total: 0 };
+  }
   async getTestCase(id: string): Promise<TestCase | undefined> { return undefined; }
   async createTestCase(testCase: InsertTestCase): Promise<TestCase> { 
     throw new Error("Not implemented in MemStorage"); 
+  }
+  async createTestCases(testCases: InsertTestCase[]): Promise<TestCase[]> {
+    throw new Error("Not implemented in MemStorage");
   }
   async updateTestCase(id: string, updates: Partial<TestCase>): Promise<TestCase> { 
     throw new Error("Not implemented in MemStorage"); 
