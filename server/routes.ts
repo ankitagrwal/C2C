@@ -1400,7 +1400,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         document.title || 'business_document',
         `Generate between ${config.targetMin}-${config.targetMax} test cases for ${config.industry || 'general'} industry`,
         { 
-          provider: config.aiProvider || 'openai', 
+          provider: (config.aiProvider as any) || 'openai', 
           model: config.aiModel || (config.aiProvider === 'gemini' ? 'gemini-1.5-pro' : 'gpt-4-turbo-preview')
         }
       );
@@ -1413,16 +1413,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         try {
           const newTestCase = await storage.createTestCase({
             title: testCase.title,
-            description: testCase.description,
+            content: testCase.description || `${testCase.steps?.join('\n') || ''}\n\nExpected: ${testCase.expectedResult || ''}`,
             category: testCase.category,
             priority: testCase.priority,
-            preconditions: testCase.preconditions || '',
-            steps: Array.isArray(testCase.steps) ? testCase.steps : [testCase.steps || ''],
-            expectedResult: testCase.expectedResult,
-            tags: testCase.tags || [],
             source: 'ai_generated',
-            documentId,
-            jobId
+            documentId
           });
           createdTestCases.push(newTestCase);
         } catch (testCaseError) {
@@ -1435,8 +1430,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         status: 'completed',
         progress: 100,
         result: { 
-          testCasesGenerated: createdTestCases.length,
-          metadata: aiResult.customerMetadata || {} 
+          testCasesGenerated: createdTestCases.length
         },
         completedAt: new Date()
       });
