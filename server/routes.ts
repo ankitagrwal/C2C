@@ -1331,7 +1331,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         documentIds: z.array(z.string().uuid()),
         targetMin: z.number().min(20).default(80),
         targetMax: z.number().max(150).default(120),
-        industry: z.string().optional()
+        industry: z.string().optional(),
+        aiProvider: z.enum(['openai', 'gemini']).optional().default('openai'),
+        aiModel: z.string().optional()
       }).parse(req.body);
 
       const jobs = [];
@@ -1350,12 +1352,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const job = await storage.createProcessingJob({
           documentId,
           jobType: 'test_generation',
-          status: 'pending',
+          status: 'processing',
           progress: 0,
           totalItems: Math.floor(Math.random() * (validatedData.targetMax - validatedData.targetMin) + validatedData.targetMin) // Random target between min-max
         });
 
         jobs.push(job);
+
+        // Start AI processing immediately (don't wait)
+        processDocumentInBackground(job.id, documentId, document, validatedData);
       }
 
       res.status(201).json({
@@ -1372,9 +1377,84 @@ export async function registerRoutes(app: Express): Promise<Server> {
           code: 'VALIDATION_ERROR'
         });
       }
+      console.error('Batch processing error:', error);
       return handleDatabaseError(error, res, 'start batch processing');
     }
   });
+
+  // Background processing function for batch jobs
+  async function processDocumentInBackground(
+    jobId: string, 
+    documentId: string, 
+    document: any, 
+    config: { aiProvider?: string; aiModel?: string; targetMin: number; targetMax: number; industry?: string }
+  ) {
+    try {
+      console.log(`Starting background AI processing for job ${jobId}...`);
+      
+      // Call the AI service to process the document
+      const aiResult = await processDocumentForTestGeneration(
+        document.fileData,
+        document.filename,
+        documentId,
+        document.title || 'business_document',
+        `Generate between ${config.targetMin}-${config.targetMax} test cases for ${config.industry || 'general'} industry`,
+        { 
+          provider: config.aiProvider || 'openai', 
+          model: config.aiModel || (config.aiProvider === 'gemini' ? 'gemini-1.5-pro' : 'gpt-4-turbo-preview')
+        }
+      );
+
+      console.log(`AI processing completed for job ${jobId}. Generated ${aiResult.testCases.testCases.length} test cases`);
+
+      // Create test cases in storage
+      const createdTestCases = [];
+      for (const testCase of aiResult.testCases.testCases) {
+        try {
+          const newTestCase = await storage.createTestCase({
+            title: testCase.title,
+            description: testCase.description,
+            category: testCase.category,
+            priority: testCase.priority,
+            preconditions: testCase.preconditions || '',
+            steps: Array.isArray(testCase.steps) ? testCase.steps : [testCase.steps || ''],
+            expectedResult: testCase.expectedResult,
+            tags: testCase.tags || [],
+            source: 'ai_generated',
+            documentId,
+            jobId
+          });
+          createdTestCases.push(newTestCase);
+        } catch (testCaseError) {
+          console.error('Failed to create test case:', testCaseError);
+        }
+      }
+
+      // Update job to completed
+      await storage.updateProcessingJob(jobId, {
+        status: 'completed',
+        progress: 100,
+        result: { 
+          testCasesGenerated: createdTestCases.length,
+          metadata: aiResult.customerMetadata || {} 
+        },
+        completedAt: new Date()
+      });
+
+      console.log(`Job ${jobId} completed successfully with ${createdTestCases.length} test cases`);
+
+    } catch (error) {
+      console.error(`Background processing failed for job ${jobId}:`, error);
+      
+      // Update job to failed status
+      await storage.updateProcessingJob(jobId, {
+        status: 'failed',
+        progress: 0,
+        result: { error: error instanceof Error ? error.message : 'Background processing failed' },
+        completedAt: new Date()
+      });
+    }
+  }
 
   // Get job status with progress tracking
   app.get('/api/jobs/:id', requireAuth, async (req: AuthenticatedRequest, res) => {

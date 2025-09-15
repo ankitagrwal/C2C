@@ -78,7 +78,7 @@ export default function DocumentsWizard({ onComplete, onCancel }: DocumentsWizar
   });
 
   const currentStepIndex = WIZARD_STEPS.findIndex(step => step.id === wizardState.currentStep);
-  const progressPercentage = ((currentStepIndex + 1) / WIZARD_STEPS.length) * 100;
+  const progressPercentage = (currentStepIndex / WIZARD_STEPS.length) * 100;
 
   const handleStepComplete = (stepData: Partial<WizardState>) => {
     setWizardState(prev => ({ ...prev, ...stepData }));
