@@ -44,6 +44,7 @@ export const documents = pgTable("documents", {
   customerId: varchar("customer_id").references(() => customers.id), // Nullable for demo mode
   filename: text("filename").notNull(),
   content: text("content"),
+  fileData: text("file_data"), // Store base64 encoded file data for processing
   docType: text("doc_type"), // 'Contract', 'Handbook', 'Tax Filing', etc.
   status: text("status").default("uploaded"),
   fileSize: integer("file_size"),

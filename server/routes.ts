@@ -652,6 +652,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         customerId: validatedData.customerId === 'demo' ? null : validatedData.customerId, // Set to null for demo mode
         filename: req.file.originalname,
         content,
+        fileData: req.file.buffer.toString('base64'), // Store file buffer as base64
         docType: validatedData.docType,
         fileSize: req.file.size,
         status: 'uploaded'
@@ -1114,7 +1115,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         // Use the AI service to process the document and generate test cases
         aiResult = await processDocumentForTestGeneration(
-          document.fileData, // Document buffer
+          Buffer.from(document.fileData, 'base64'), // Convert base64 back to Buffer
           document.filename, // Original filename
           documentId, // Document ID
           document.title || 'business_document', // Document type
@@ -1295,6 +1296,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             customerId: (validatedData.customerId === 'demo' || !validatedData.customerId) ? null : validatedData.customerId,
             filename: file.originalname,
             content,
+            fileData: file.buffer.toString('base64'), // Store file buffer as base64
             docType: validatedData.docType,
             fileSize: file.size,
             status: 'uploaded'
@@ -1394,7 +1396,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Call the AI service to process the document
       const aiResult = await processDocumentForTestGeneration(
-        document.fileData,
+        Buffer.from(document.fileData, 'base64'), // Convert base64 back to Buffer
         document.filename,
         documentId,
         document.title || 'business_document',
