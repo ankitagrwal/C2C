@@ -835,7 +835,7 @@ export default function ReviewSubmitStep({
                     </div>
                   </TableCell>
                   <TableCell className="min-w-[200px] max-w-[300px] align-top" data-testid={`text-steps-${testCase.id}`}>
-                    <div className="text-sm text-muted-foreground break-words hyphens-auto leading-relaxed whitespace-pre-line" title={testCase.parsedSteps}>
+                    <div className="text-sm text-muted-foreground break-words hyphens-auto leading-relaxed whitespace-pre-wrap" title={testCase.parsedSteps}>
                       {testCase.parsedSteps}
                     </div>
                   </TableCell>
