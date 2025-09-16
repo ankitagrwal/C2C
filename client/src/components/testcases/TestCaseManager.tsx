@@ -26,7 +26,20 @@ import {
 } from "lucide-react";
 
 // Mock test cases data //todo: remove mock functionality
-const mockTestCases = [
+type TestCase = {
+  id: string;
+  content: string;
+  category: string;
+  source: string;
+  confidenceScore: number | null;
+  contextUsed: string | null;
+  executionStatus: string;
+  documentName: string;
+  customerName: string;
+  createdAt: string;
+};
+
+const mockTestCases: TestCase[] = [
   {
     id: '1',
     content: 'Verify that software license allows maximum 500 concurrent users as specified in Section 3.2',
@@ -395,7 +408,7 @@ export default function TestCaseManager() {
     );
   }
 
-  const filteredTestCases = testCases.filter(tc => {
+  const filteredTestCases = testCases.filter((tc: TestCase) => {
     const matchesSearch = tc.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          (tc.documentName || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
                          (tc.customerName || '').toLowerCase().includes(searchQuery.toLowerCase());
@@ -441,7 +454,7 @@ export default function TestCaseManager() {
 
   const categoryStats = categories.slice(1).map(cat => ({
     category: cat,
-    count: testCases.filter(tc => tc.category === cat).length
+    count: testCases.filter((tc: TestCase) => tc.category === cat).length
   }));
 
   return (
@@ -580,7 +593,7 @@ export default function TestCaseManager() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {filteredTestCases.map((testCase) => (
+            {filteredTestCases.map((testCase: TestCase) => (
               <div key={testCase.id} className="border rounded-lg p-4 hover-elevate">
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex-1">
