@@ -106,9 +106,102 @@ export default function ReviewSubmitStep({
     }
   });
 
-  // Filter and search test cases
+  // Common section headers pattern for robust parsing with flexible punctuation
+  const sectionHeaderRegex = /^(steps?|test steps|test details|procedures?|preconditions?|expected results?|expected outcome|expected behavio[u]?r|results?|acceptance criteria|notes?)[\s:.-]*$/i;
+  
+  // Memoized parsing for performance
+  const parsedTestCases = useMemo(() => {
+    return testCases.map(testCase => {
+      const lines = testCase.content.split('\n');
+      
+      // Extract steps
+      let stepsStart = -1;
+      let stepsEnd = -1;
+      
+      // Find the "Steps:" section with flexible matching
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (/^(steps?|test steps|test details|procedures?)[\s:.-]*$/i.test(line)) {
+          stepsStart = i + 1;
+          break;
+        }
+      }
+      
+      let steps = '';
+      if (stepsStart !== -1) {
+        // Find the end of steps (next section header, not blank lines)
+        for (let i = stepsStart; i < lines.length; i++) {
+          const line = lines[i].trim();
+          if (sectionHeaderRegex.test(line) && !/^(steps?|test steps|test details|procedures?)[\s:.-]*$/i.test(line)) {
+            stepsEnd = i;
+            break;
+          }
+        }
+        
+        if (stepsEnd === -1) stepsEnd = lines.length;
+        
+        // Skip leading blank lines after steps header
+        let actualStart = stepsStart;
+        while (actualStart < stepsEnd && !lines[actualStart].trim()) {
+          actualStart++;
+        }
+        
+        steps = lines.slice(actualStart, stepsEnd)
+          .join('\n')
+          .trim();
+      }
+      
+      // Extract description
+      let descStart = -1;
+      let descEnd = -1;
+      
+      // Find the "Description:" section
+      for (let i = 0; i < lines.length; i++) {
+        if (/^description[\s:.-]*$/i.test(lines[i].trim())) {
+          descStart = i;
+          break;
+        }
+      }
+      
+      let description = '';
+      if (descStart !== -1) {
+        // Find the end of description (next section)
+        for (let i = descStart + 1; i < lines.length; i++) {
+          const line = lines[i].trim();
+          if (sectionHeaderRegex.test(line)) {
+            descEnd = i;
+            break;
+          }
+        }
+        
+        if (descEnd === -1) descEnd = lines.length;
+        
+        // Get description content (remove "Description:" label)
+        const descLines = lines.slice(descStart, descEnd);
+        if (descLines.length > 0) {
+          descLines[0] = descLines[0].replace(/^description[\s:.-]*\s*/i, '');
+        }
+        
+        description = descLines
+          .filter(line => line.trim())
+          .join(' ')
+          .trim();
+      } else {
+        // If no description section, use the title (first line)
+        description = lines[0] || '';
+      }
+      
+      return {
+        ...testCase,
+        parsedDescription: description,
+        parsedSteps: steps || 'No steps defined'
+      };
+    });
+  }, [testCases]);
+
+  // Filter and search test cases (using parsed data)
   const filteredTestCases = useMemo(() => {
-    let filtered = testCases;
+    let filtered = parsedTestCases;
 
     // Search filter
     if (searchTerm) {
@@ -136,7 +229,7 @@ export default function ReviewSubmitStep({
     }
 
     return filtered;
-  }, [testCases, searchTerm, categoryFilters, priorityFilters, sourceFilters]);
+  }, [parsedTestCases, searchTerm, categoryFilters, priorityFilters, sourceFilters]);
 
   // Pagination
   const totalPages = Math.ceil(filteredTestCases.length / itemsPerPage);
@@ -671,6 +764,7 @@ export default function ReviewSubmitStep({
                 <TableHead>Priority</TableHead>
                 <TableHead>Source</TableHead>
                 <TableHead>Description</TableHead>
+                <TableHead>Test Steps</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -714,9 +808,16 @@ export default function ReviewSubmitStep({
                        testCase.source === 'manual' ? 'Manual' : 'Uploaded'}
                     </Badge>
                   </TableCell>
-                  <TableCell className="max-w-md">
-                    <div className="truncate text-sm text-muted-foreground" title={testCase.content}>
-                      {testCase.content}
+                  <TableCell className="max-w-md" data-testid={`text-description-${testCase.id}`}>
+                    <div className="truncate text-sm text-muted-foreground" title={testCase.parsedDescription}>
+                      {testCase.parsedDescription}
+                    </div>
+                  </TableCell>
+                  <TableCell className="max-w-md" data-testid={`text-steps-${testCase.id}`}>
+                    <div className="text-sm text-muted-foreground whitespace-pre-line">
+                      <div className="max-h-24 overflow-y-auto">
+                        {testCase.parsedSteps}
+                      </div>
                     </div>
                   </TableCell>
                 </TableRow>
