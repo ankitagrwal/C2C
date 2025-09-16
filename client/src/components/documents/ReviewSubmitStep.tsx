@@ -87,8 +87,7 @@ export default function ReviewSubmitStep({
   const [sourceFilters, setSourceFilters] = useState<Set<string>>(new Set());
   const [itemsPerPage, setItemsPerPage] = useState(50);
   const [currentPage, setCurrentPage] = useState(1);
-  const [solutionIdStatus, setSolutionIdStatus] = useState<'idle' | 'checking' | 'exists' | 'available' | 'error'>('idle');
-  const [existingCustomer, setExistingCustomer] = useState<Customer | null>(null);
+  // Removed solutionId availability checking - IDs are created externally
   const { toast } = useToast();
   const [, setLocation] = useLocation();
 
@@ -269,127 +268,9 @@ export default function ReviewSubmitStep({
     setSelectedTestCases(newSelected);
   };
 
-  // Customer lookup by solution ID with race condition protection
-  const lookupCustomerBySolutionId = async (queriedSolutionId: string, abortController: AbortController) => {
-    if (!queriedSolutionId || queriedSolutionId.trim().length === 0) {
-      setSolutionIdStatus('idle');
-      setExistingCustomer(null);
-      return;
-    }
+  // Removed customer lookup by solution ID - no checking needed
 
-    setSolutionIdStatus('checking');
-    
-    try {
-      const response = await fetch(`/api/customers/by-solution-id/${encodeURIComponent(queriedSolutionId)}`, {
-        credentials: 'include',
-        headers: {
-          'X-Requested-With': 'XMLHttpRequest',
-        },
-        signal: abortController.signal,
-      });
-
-      // CRITICAL: Check if response is still relevant to current form value
-      // This prevents race condition where older responses overwrite newer state
-      const currentSolutionId = form.getValues('solutionId');
-      if (currentSolutionId !== queriedSolutionId) {
-        // Response is stale - ignore it to prevent form corruption
-        console.debug(`Ignoring stale customer lookup response for '${queriedSolutionId}', current value is '${currentSolutionId}'`);
-        return;
-      }
-
-      if (response.status === 404) {
-        // Solution ID is available (not found)
-        setSolutionIdStatus('available');
-        setExistingCustomer(null);
-        return;
-      }
-
-      if (!response.ok) {
-        throw new Error(`Lookup failed: ${response.statusText}`);
-      }
-
-      const customer = await response.json();
-      
-      // Double-check the solution ID again before updating state
-      // Additional protection against race conditions
-      const finalCurrentSolutionId = form.getValues('solutionId');
-      if (finalCurrentSolutionId !== queriedSolutionId) {
-        console.debug(`Ignoring late customer data for '${queriedSolutionId}', current value is '${finalCurrentSolutionId}'`);
-        return;
-      }
-      
-      setSolutionIdStatus('exists');
-      setExistingCustomer(customer);
-
-      // Auto-fill form with existing customer data
-      form.setValue('name', customer.name);
-      form.setValue('industry', customer.industry || industry);
-      
-      // Reduced toast noise - show inline status instead for better UX
-      console.info(`Customer found: ${customer.name} (${customer.solutionId})`);
-
-    } catch (error) {
-      // Ignore aborted requests (normal when user types quickly)
-      if (error instanceof Error && error.name === 'AbortError') {
-        console.debug(`Customer lookup aborted for '${queriedSolutionId}'`);
-        return;
-      }
-      
-      // Only show error if this is still the current solution ID
-      const currentSolutionId = form.getValues('solutionId');
-      if (currentSolutionId === queriedSolutionId) {
-        setSolutionIdStatus('error');
-        setExistingCustomer(null);
-        
-        toast({
-          title: 'Lookup Failed',
-          description: error instanceof Error ? error.message : 'Failed to lookup solution ID',
-          variant: 'destructive',
-        });
-      }
-    }
-  };
-
-  // Debounced solution ID validation with abort controller for race condition protection
-  const [solutionIdTimeout, setSolutionIdTimeout] = useState<ReturnType<typeof setTimeout> | null>(null);
-  const [currentAbortController, setCurrentAbortController] = useState<AbortController | null>(null);
-  
-  const handleSolutionIdChange = (solutionId: string) => {
-    // Clear existing timeout
-    if (solutionIdTimeout) {
-      clearTimeout(solutionIdTimeout);
-    }
-    
-    // Cancel any in-flight request to prevent race conditions
-    if (currentAbortController) {
-      currentAbortController.abort();
-    }
-
-    // Reset status and customer when typing
-    setSolutionIdStatus('idle');
-    setExistingCustomer(null);
-
-    // Set new timeout for validation with fresh abort controller
-    const newTimeout = setTimeout(() => {
-      const abortController = new AbortController();
-      setCurrentAbortController(abortController);
-      lookupCustomerBySolutionId(solutionId, abortController);
-    }, 1000); // 1 second debounce
-    
-    setSolutionIdTimeout(newTimeout);
-  };
-
-  // Cleanup timeout and abort controller on unmount
-  useEffect(() => {
-    return () => {
-      if (solutionIdTimeout) {
-        clearTimeout(solutionIdTimeout);
-      }
-      if (currentAbortController) {
-        currentAbortController.abort();
-      }
-    };
-  }, [solutionIdTimeout, currentAbortController]);
+  // Removed solutionId debounced validation - no checking needed
 
   // Submit workflow mutation
   const submitMutation = useMutation({
@@ -404,18 +285,12 @@ export default function ReviewSubmitStep({
         throw new Error('No document ID available for submission');
       }
 
-      // Determine if we're using an existing customer or creating a new one
-      const customerPayload = existingCustomer && solutionIdStatus === 'exists' 
-        ? {
-            // Use existing customer - only send ID
-            id: existingCustomer.id
-          }
-        : {
-            // Create new customer - send all required fields but no ID
-            name: data.name,
-            industry: data.industry,
-            solutionId: data.solutionId
-          };
+      // Always create customer with provided data - no existing customer checking
+      const customerPayload = {
+        name: data.name,
+        industry: data.industry,
+        solutionId: data.solutionId
+      };
 
       const response = await fetch('/api/test-cases/submit', {
         method: 'POST',
@@ -471,34 +346,7 @@ export default function ReviewSubmitStep({
   });
 
   const onSubmit = (data: CustomerFormData) => {
-    // Validate solution ID status before submission
-    if (solutionIdStatus === 'checking') {
-      toast({
-        title: 'Please Wait',
-        description: 'Still checking solution ID availability. Please wait a moment.',
-        variant: 'destructive',
-      });
-      return;
-    }
-    
-    if (solutionIdStatus === 'error') {
-      toast({
-        title: 'Solution ID Error',
-        description: 'Please fix the solution ID error before submitting.',
-        variant: 'destructive',
-      });
-      return;
-    }
-    
-    if (solutionIdStatus === 'idle' && data.solutionId.trim().length > 0) {
-      toast({
-        title: 'Solution ID Not Verified',
-        description: 'Please wait for solution ID verification to complete.',
-        variant: 'destructive',
-      });
-      return;
-    }
-    
+    // No validation needed for solutionId - always allow submission
     submitMutation.mutate(data);
   };
 
@@ -920,12 +768,16 @@ export default function ReviewSubmitStep({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
-                  name="name"
+                  name="solutionId"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Company Name *</FormLabel>
+                      <FormLabel>Solution ID *</FormLabel>
                       <FormControl>
-                        <Input {...field} data-testid="input-company-name" />
+                        <Input 
+                          {...field} 
+                          placeholder="e.g., SOL-2024-001" 
+                          data-testid="input-solution-id"
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -934,62 +786,14 @@ export default function ReviewSubmitStep({
 
                 <FormField
                   control={form.control}
-                  name="solutionId"
+                  name="name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Solution ID *</FormLabel>
+                      <FormLabel>Company Name *</FormLabel>
                       <FormControl>
-                        <div className="relative">
-                          <Input 
-                            {...field} 
-                            placeholder="e.g., SOL-2024-001" 
-                            data-testid="input-solution-id"
-                            onChange={(e) => {
-                              field.onChange(e);
-                              handleSolutionIdChange(e.target.value);
-                            }}
-                            className={
-                              solutionIdStatus === 'exists' ? 'pr-10 border-orange-500' :
-                              solutionIdStatus === 'available' ? 'pr-10 border-green-500' :
-                              solutionIdStatus === 'error' ? 'pr-10 border-red-500' :
-                              'pr-10'
-                            }
-                          />
-                          <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                            {solutionIdStatus === 'checking' && (
-                              <div className="animate-spin w-4 h-4 border-2 border-primary border-t-transparent rounded-full" />
-                            )}
-                            {solutionIdStatus === 'exists' && (
-                              <AlertCircle className="w-4 h-4 text-orange-500" />
-                            )}
-                            {solutionIdStatus === 'available' && (
-                              <CheckCircle className="w-4 h-4 text-green-500" />
-                            )}
-                            {solutionIdStatus === 'error' && (
-                              <AlertCircle className="w-4 h-4 text-red-500" />
-                            )}
-                          </div>
-                        </div>
+                        <Input {...field} data-testid="input-company-name" />
                       </FormControl>
                       <FormMessage />
-                      {solutionIdStatus === 'exists' && existingCustomer && (
-                        <div className="text-sm text-orange-600 mt-1 flex items-center space-x-2">
-                          <AlertCircle className="w-3 h-3" />
-                          <span>Solution ID exists for: {existingCustomer.name} (auto-filled)</span>
-                        </div>
-                      )}
-                      {solutionIdStatus === 'available' && (
-                        <div className="text-sm text-green-600 mt-1 flex items-center space-x-2">
-                          <CheckCircle className="w-3 h-3" />
-                          <span>Solution ID is available</span>
-                        </div>
-                      )}
-                      {solutionIdStatus === 'error' && (
-                        <div className="text-sm text-red-600 mt-1 flex items-center space-x-2">
-                          <AlertCircle className="w-3 h-3" />
-                          <span>Unable to verify solution ID</span>
-                        </div>
-                      )}
                     </FormItem>
                   )}
                 />
