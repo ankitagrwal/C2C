@@ -9,6 +9,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertUserSchema } from "@shared/schema";
 import { z } from "zod";
+import backgroundImage from "@assets/ChatGPT Image Sep 16, 2025, 06_25_19 PM_1758029442855.png";
 
 type LoginFormData = z.infer<typeof insertUserSchema>;
 
@@ -37,8 +38,20 @@ export default function LoginForm({ onLogin, isLoading = false, error }: LoginFo
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4" data-testid="login-container">
-      <Card className="w-full max-w-md">
+    <div 
+      className="min-h-screen flex items-center justify-center p-4 relative" 
+      data-testid="login-container"
+      style={{
+        backgroundImage: `url(${backgroundImage})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat'
+      }}
+    >
+      {/* Dark overlay for better text readability */}
+      <div className="absolute inset-0 bg-black/40"></div>
+      
+      <Card className="w-full max-w-md relative z-10 backdrop-blur-sm bg-background/95">
         <CardHeader className="text-center space-y-2">
           <div className="flex items-center justify-center mb-4">
             <div className="bg-primary/10 p-3 rounded-lg">
