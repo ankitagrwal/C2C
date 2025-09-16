@@ -172,7 +172,7 @@ export default function AutoCustomerDetectionModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" data-testid="modal-auto-customer-detection">
+      <DialogContent className="max-w-2xl max-h-[90vh]" data-testid="modal-auto-customer-detection">
         <DialogHeader>
           <div className="flex items-center space-x-2">
             <Sparkles className="h-5 w-5 text-primary" />

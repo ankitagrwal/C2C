@@ -824,7 +824,7 @@ export default function ReviewSubmitStep({
                   </TableCell>
                   <TableCell className="max-w-md" data-testid={`text-steps-${testCase.id}`}>
                     <div className="text-sm text-muted-foreground whitespace-pre-line">
-                      <div className="max-h-24 overflow-y-auto">
+                      <div className="max-h-24">
                         {testCase.parsedSteps}
                       </div>
                     </div>
