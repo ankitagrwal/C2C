@@ -305,15 +305,11 @@ export default function ReviewSubmitStep({
         throw new Error('Please select at least one test case to submit');
       }
 
-      const submitData: SubmitData = {
-        customerId: '', // Will be created by backend
-        documentIds,
-        testCaseIds: selectedTestCaseIds,
-        requirements: data.requirements,
-        notes: data.notes
-      };
+      if (documentIds.length === 0) {
+        throw new Error('No document ID available for submission');
+      }
 
-      const response = await fetch('/api/documents/submit-workflow', {
+      const response = await fetch('/api/test-cases/submit', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -321,8 +317,14 @@ export default function ReviewSubmitStep({
         },
         credentials: 'include',
         body: JSON.stringify({
-          customer: data,
-          submission: submitData
+          documentId: documentIds[0], // Use first document ID
+          customer: {
+            id: existingCustomer?.id, // Optional - if existing customer
+            name: data.name,
+            industry: data.industry,
+            solutionId: data.solutionId
+          },
+          selectedTestCaseIds
         })
       });
 
