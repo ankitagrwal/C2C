@@ -59,7 +59,23 @@ export default function ReportsPage() {
 
   // Fetch report data based on submission parameters
   const { data: reportData, isLoading, error } = useQuery<ReportData>({
-    queryKey: ['/api/reports/submission', submissionId || customerId || documentId],
+    queryKey: ['/api/reports/submission', { submissionId, customerId, documentId }],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (submissionId) params.append('submissionId', submissionId);
+      if (customerId) params.append('customerId', customerId);
+      if (documentId) params.append('documentId', documentId);
+      
+      const response = await fetch(`/api/reports/submission?${params.toString()}`, {
+        credentials: 'include'
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch report data: ${response.status}`);
+      }
+      
+      return response.json();
+    },
     enabled: !!(submissionId || customerId || documentId),
   });
 
