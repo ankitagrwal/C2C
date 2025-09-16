@@ -58,6 +58,9 @@ export interface IStorage {
   getProcessingJob(id: string): Promise<ProcessingJob | undefined>;
   createProcessingJob(job: InsertProcessingJob): Promise<ProcessingJob>;
   updateProcessingJob(id: string, updates: Partial<ProcessingJob>): Promise<ProcessingJob>;
+  
+  // Report operations
+  getReportData(submissionId?: string, customerId?: string, documentId?: string): Promise<any | undefined>;
 }
 
 export class MemStorage implements IStorage {
@@ -144,6 +147,10 @@ export class MemStorage implements IStorage {
   }
   async updateProcessingJob(id: string, updates: Partial<ProcessingJob>): Promise<ProcessingJob> { 
     throw new Error("Not implemented in MemStorage"); 
+  }
+
+  async getReportData(submissionId?: string, customerId?: string, documentId?: string): Promise<any | undefined> {
+    throw new Error("Not implemented in MemStorage - use DatabaseStorage");
   }
 }
 

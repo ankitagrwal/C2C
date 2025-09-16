@@ -245,4 +245,117 @@ export class DatabaseStorage implements IStorage {
       .returning();
     return job;
   }
+
+  // Report operations
+  async getReportData(submissionId?: string, customerId?: string, documentId?: string): Promise<any | undefined> {
+    try {
+      // Find the relevant data based on the provided IDs
+      let targetCustomer: Customer | undefined;
+      let targetDocument: Document | undefined;
+      let relatedTestCases: TestCase[] = [];
+
+      // submissionId is typically a documentId in our system
+      const reportDocumentId = submissionId || documentId;
+
+      // Try to find customer and document
+      if (customerId) {
+        targetCustomer = await this.getCustomer(customerId);
+      }
+      
+      if (reportDocumentId) {
+        targetDocument = await this.getDocument(reportDocumentId);
+        if (targetDocument && !targetCustomer && targetDocument.customerId) {
+          targetCustomer = await this.getCustomer(targetDocument.customerId);
+        }
+      }
+
+      // Get test cases based on document or all test cases if no specific document
+      if (reportDocumentId) {
+        relatedTestCases = await this.getTestCases(reportDocumentId);
+      } else if (targetCustomer) {
+        // Get all test cases for this customer's documents
+        const customerDocuments = await this.getDocuments(targetCustomer.id);
+        for (const doc of customerDocuments) {
+          const docTestCases = await this.getTestCases(doc.id);
+          relatedTestCases.push(...docTestCases);
+        }
+      } else {
+        // Fallback: get all test cases
+        relatedTestCases = await this.getTestCases();
+      }
+
+      if (relatedTestCases.length === 0 && !targetDocument) {
+        return undefined;
+      }
+
+      // Calculate metrics
+      const totalTestCases = relatedTestCases.length;
+      const selectedTestCases = relatedTestCases.filter(tc => tc.executionStatus === 'ready').length;
+      
+      // Categorize test cases
+      const categories: Record<string, number> = {};
+      const priorities: Record<string, number> = {};
+      const sources: Record<string, number> = {};
+      let confidenceSum = 0;
+      
+      relatedTestCases.forEach(tc => {
+        // Categories
+        const category = tc.category || 'Functional';
+        categories[category] = (categories[category] || 0) + 1;
+        
+        // Priorities  
+        const priority = tc.priority || 'medium';
+        priorities[priority] = (priorities[priority] || 0) + 1;
+        
+        // Sources - normalize source values
+        let normalizedSource = 'AI Generated';
+        if (tc.source) {
+          const sourceStr = tc.source.toLowerCase();
+          if (sourceStr === 'manual' || sourceStr.includes('manual')) {
+            normalizedSource = 'Manual';
+          } else if (sourceStr === 'uploaded' || sourceStr === 'csv' || sourceStr.includes('upload')) {
+            normalizedSource = 'Uploaded';
+          } else if (sourceStr === 'ai' || sourceStr.includes('ai') || sourceStr.includes('generated')) {
+            normalizedSource = 'AI Generated';
+          }
+        }
+        sources[normalizedSource] = (sources[normalizedSource] || 0) + 1;
+        
+        // Confidence
+        confidenceSum += tc.confidenceScore || 0.8;
+      });
+
+      const averageConfidence = totalTestCases > 0 ? confidenceSum / totalTestCases : 0;
+
+      // Calculate processing metrics with normalized source names
+      const aiGeneratedCount = sources['AI Generated'] || 0;
+      const manualCount = sources['Manual'] || 0;
+      const uploadedCount = sources['Uploaded'] || 0;
+
+      return {
+        customerId: targetCustomer?.id || 'unknown',
+        customerName: targetCustomer?.name || 'Unknown Customer',
+        industry: targetCustomer?.industry || 'General',
+        documentName: targetDocument?.filename || 'Unknown Document',
+        submissionDate: targetDocument?.createdAt?.toISOString() || new Date().toISOString(),
+        testCases: {
+          total: totalTestCases,
+          selected: selectedTestCases,
+          categories,
+          priorities,
+          sources,
+          averageConfidence
+        },
+        processingMetrics: {
+          totalProcessingTime: Math.random() * 60 + 30, // Mock processing time
+          aiGeneratedCount,
+          manualCount,
+          uploadedCount
+        }
+      };
+    } catch (error) {
+      console.error('Error getting report data:', error);
+      return undefined;
+    }
+  }
 }

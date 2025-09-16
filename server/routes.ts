@@ -1850,6 +1850,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ===================
+  // REPORTS API ROUTES  
+  // ===================
+
+  // Get report data for a submission
+  app.get('/api/reports/submission', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const validatedQuery = z.object({
+        submissionId: z.string().uuid().optional(),
+        customerId: z.string().uuid().optional(),
+        documentId: z.string().uuid().optional()
+      }).parse(req.query);
+
+      const { submissionId, customerId, documentId } = validatedQuery;
+
+      if (!submissionId && !customerId && !documentId) {
+        return res.status(400).json({ 
+          error: 'At least one of submissionId, customerId, or documentId is required',
+          code: 'MISSING_PARAMETERS'
+        });
+      }
+
+      const reportData = await storage.getReportData(submissionId, customerId, documentId);
+      
+      if (!reportData) {
+        return res.status(404).json({ 
+          error: 'Report data not found',
+          code: 'REPORT_NOT_FOUND'
+        });
+      }
+
+      res.json(reportData);
+
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          error: 'Invalid query parameters', 
+          details: error.errors,
+          code: 'VALIDATION_ERROR'
+        });
+      }
+      return handleDatabaseError(error, res, 'get report data');
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;
