@@ -23,8 +23,8 @@ const internalSystems = [
   {
     id: 'pmap',
     name: 'PMAP',
-    fullName: 'Policy Management and Assessment Platform',
-    description: 'Comprehensive platform for managing policies, procedures, and compliance requirements across all customer environments',
+    fullName: 'Project Management and Assessment Platform',
+    description: 'End-to-end project and delivery management. Milestones, risks, resources, and status in one place—from start to go-live.',
     status: 'active',
     lastUsed: '2024-09-12T05:30:00Z',
     usageCount: 324,
@@ -32,18 +32,19 @@ const internalSystems = [
     endpoint: 'https://pmap.internal.company.com',
     version: '2.4.1',
     capabilities: [
-      'Policy document management',
-      'Compliance tracking', 
-      'Risk assessment',
-      'Audit trail generation'
+      'Milestones & gates',
+      'Risk/issue tracking',
+      'Resource planning',
+      'Deliverables',
+      'Status dashboards'
     ],
     icon: Shield
   },
   {
     id: 'navigator',
     name: 'Navigator',
-    fullName: 'System Navigation and Integration Hub',
-    description: 'Centralized navigation system that provides unified access to all internal tools and customer-specific configurations',
+    fullName: 'Pro WFM Migration Hub',
+    description: 'Consultant-built migration hub for Pro WFM. Assesses WFC, maps business structures, and surfaces readiness to reduce manual work.',
     status: 'active',
     lastUsed: '2024-09-12T06:15:00Z',
     usageCount: 198,
@@ -51,9 +52,11 @@ const internalSystems = [
     endpoint: 'https://navigator.internal.company.com',
     version: '3.1.0',
     capabilities: [
-      'Unified system access',
-      'Customer environment routing',
-      'Permission management',
+      'Readiness dashboards',
+      'WFC assessment',
+      'Drag-drop mapping',
+      'ProCeed import',
+      'Config conversion',
       'Activity monitoring'
     ],
     icon: Navigation
@@ -61,8 +64,8 @@ const internalSystems = [
   {
     id: 'validator',
     name: 'Validator',
-    fullName: 'Document and Data Validation Engine',
-    description: 'Advanced validation engine that ensures data integrity, format compliance, and business rule adherence across all systems',
+    fullName: 'Pro WFM Config Testing Engine',
+    description: 'Automated config testing for Pro WFM. Generates and runs tests on policies, work rules, accruals, and terms—reducing errors and accelerating UAT.',
     status: 'active',
     lastUsed: '2024-09-12T05:45:00Z',
     usageCount: 456,
@@ -70,10 +73,13 @@ const internalSystems = [
     endpoint: 'https://validator.internal.company.com',
     version: '1.8.2',
     capabilities: [
-      'Document format validation',
-      'Business rule checking',
-      'Data integrity verification',
-      'Compliance validation'
+      'Auto test generation',
+      'Policy & work-rule tests',
+      'Accrual validation',
+      'Config integrity',
+      'Quick Test',
+      'Day-in-Life Simulation',
+      'UAT accelerator'
     ],
     icon: FileCheck
   }
