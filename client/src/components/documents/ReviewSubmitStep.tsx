@@ -43,6 +43,8 @@ interface ReviewSubmitStepProps {
   initialCustomer?: Partial<Customer>;
   documentIds?: string[];
   industry?: string;
+  aiGeneratedCount?: number;  // Count from step 2 (AI processing)
+  manualCount?: number;       // Count from step 3 (manual CSV upload)
 }
 
 interface SubmitData {
@@ -73,7 +75,9 @@ export default function ReviewSubmitStep({
   onComplete, 
   initialCustomer, 
   documentIds = [],
-  industry = 'General'
+  industry = 'General',
+  aiGeneratedCount = 0,
+  manualCount = 0
 }: ReviewSubmitStepProps) {
   const [selectedTestCases, setSelectedTestCases] = useState<Set<string>>(new Set(testCases.map(tc => tc.id)));
   const [searchTerm, setSearchTerm] = useState('');
@@ -351,8 +355,7 @@ export default function ReviewSubmitStep({
 
   // Statistics
   const selectedCount = selectedTestCases.size;
-  const aiGeneratedCount = testCases.filter(tc => tc.source === 'generated').length;
-  const manualCount = testCases.filter(tc => tc.source === 'manual' || tc.source === 'uploaded').length;
+  // Note: aiGeneratedCount and manualCount now come from props (wizard state)
 
   const categoryStats = TEST_CASE_CATEGORIES.map(category => ({
     category,
