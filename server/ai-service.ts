@@ -1,21 +1,17 @@
-import OpenAI from 'openai';
+// OpenAI removed - using only Gemini as requested
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import mammoth from 'mammoth';
 import { parse } from 'node-html-parser';
 import crypto from 'crypto';
 
-// Initialize AI clients
-// Only initialize OpenAI if API key is available
-const openai = process.env.OPENAI_API_KEY ? new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-}) : null;
+// Initialize AI clients - GEMINI ONLY as requested by user
 
 // Initialize Gemini client with proper SDK
 // Only initialize if API key is available
 const gemini = process.env.GEMINI_API_KEY ? new GoogleGenerativeAI(process.env.GEMINI_API_KEY) : null;
 
-// AI Provider configuration
-export type AIProvider = 'openai' | 'gemini';
+// AI Provider configuration - GEMINI ONLY
+export type AIProvider = 'gemini';
 
 export interface AIProviderConfig {
   provider: AIProvider;
@@ -134,24 +130,15 @@ export function chunkDocument(text: string, chunkSize: number = 1000, overlap: n
 }
 
 /**
- * Generate embeddings for text chunks using OpenAI
+ * Generate embeddings for text chunks using simple embeddings (Gemini-only mode)
  */
 export async function generateEmbeddings(texts: string[]): Promise<number[][]> {
   if (texts.length === 0) return [];
   
   try {
-    if (!openai) {
-      // For Gemini-only setup, return mock embeddings to skip RAG functionality
-      console.log('OpenAI not configured, using simple embeddings for Gemini-only mode');
-      return texts.map(() => Array(1536).fill(0).map(() => Math.random() - 0.5));
-    }
-    const response = await openai.embeddings.create({
-      model: 'text-embedding-3-small', // More cost-effective than ada-002
-      input: texts,
-      encoding_format: 'float',
-    });
-    
-    return response.data.map(item => item.embedding);
+    // Using simple embeddings for Gemini-only mode as requested by user
+    console.log('Using simple embeddings for Gemini-only mode');
+    return texts.map(() => Array(1536).fill(0).map(() => Math.random() - 0.5));
   } catch (error) {
     console.error('Error generating embeddings:', error);
     throw new Error(`Failed to generate embeddings: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -184,37 +171,25 @@ Respond in JSON format:
 }`;
 
   try {
-    if (config.provider === 'gemini' && gemini) {
-      const model = gemini.getGenerativeModel({ model: config.model || "gemini-2.0-flash" });
-      const response = await model.generateContent([prompt]);
-      
-      const text = response.response.text();
-      const result = JSON.parse(text || '{}');
-      return {
-        customerName: result.customerName || undefined,
-        documentType: result.documentType || undefined,
-        industry: result.industry || undefined,
-        extractedAt: new Date().toISOString()
-      };
-    } else {
-      if (!openai) {
-        throw new Error('OpenAI client not initialized. Please configure OPENAI_API_KEY.');
-      }
-      const response = await openai.chat.completions.create({
-        model: config.model || 'gpt-4-turbo-preview',
-        messages: [{ role: 'user', content: prompt }],
-        temperature: 0.1,
-        response_format: { type: 'json_object' }
-      });
-      
-      const result = JSON.parse(response.choices[0]?.message?.content || '{}');
-      return {
-        customerName: result.customerName || undefined,
-        documentType: result.documentType || undefined, 
-        industry: result.industry || undefined,
-        extractedAt: new Date().toISOString()
-      };
+    // Using ONLY Gemini as requested by user
+    if (!gemini) {
+      throw new Error('Gemini client not initialized. Please configure GEMINI_API_KEY.');
     }
+    
+    const model = gemini.getGenerativeModel({ model: config.model || "gemini-2.0-flash" });
+    const response = await model.generateContent([prompt]);
+    
+    let text = response.response.text() || '{}';
+    // Strip markdown code blocks from Gemini response
+    text = text.replace(/```json\s*/g, '').replace(/```\s*$/g, '').trim();
+    
+    const result = JSON.parse(text);
+    return {
+      customerName: result.customerName || undefined,
+      documentType: result.documentType || undefined,
+      industry: result.industry || undefined,
+      extractedAt: new Date().toISOString()
+    };
   } catch (error) {
     console.error('Error extracting document metadata:', error);
     // Return partial metadata on error
@@ -329,38 +304,22 @@ Generate test cases that thoroughly validate the requirements, processes, and po
     let result: any;
     let content: string;
 
-    if (config.provider === 'gemini' && gemini) {
-      const model = gemini.getGenerativeModel({ model: config.model || "gemini-2.0-flash" });
-      const prompt = `${systemPrompt}\n\n${userPrompt}`;
-      const response = await model.generateContent([prompt]);
-
-      content = response.response.text() || '';
-      if (!content) {
-        throw new Error('No content in Gemini response');
-      }
-      
-      // Strip markdown code blocks from Gemini response
-      content = content.replace(/```json\s*/g, '').replace(/```\s*$/g, '').trim();
-    } else {
-      if (!openai) {
-        throw new Error('OpenAI client not initialized. Please configure OPENAI_API_KEY.');
-      }
-      const response = await openai.chat.completions.create({
-        model: config.model || 'gpt-4-turbo-preview',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
-        ],
-        temperature: 0.7,
-        max_tokens: 3000,
-        response_format: { type: 'json_object' }
-      });
-
-      content = response.choices[0]?.message?.content || '';
-      if (!content) {
-        throw new Error('No content in OpenAI response');
-      }
+    // Using ONLY Gemini as requested by user
+    if (!gemini) {
+      throw new Error('Gemini client not initialized. Please configure GEMINI_API_KEY.');
     }
+    
+    const model = gemini.getGenerativeModel({ model: config.model || "gemini-2.0-flash" });
+    const prompt = `${systemPrompt}\n\n${userPrompt}`;
+    const response = await model.generateContent([prompt]);
+
+    content = response.response.text() || '';
+    if (!content) {
+      throw new Error('No content in Gemini response');
+    }
+    
+    // Strip markdown code blocks from Gemini response
+    content = content.replace(/```json\s*/g, '').replace(/```\s*$/g, '').trim();
 
     result = JSON.parse(content);
     const processingTime = Date.now() - startTime;

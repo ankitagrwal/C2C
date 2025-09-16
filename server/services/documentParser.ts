@@ -1,16 +1,4 @@
-import OpenAI from 'openai';
-
-// Initialize OpenAI client only if API key is available
-let openai: OpenAI | null = null;
-try {
-  if (process.env.OPENAI_API_KEY) {
-    openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY
-    });
-  }
-} catch (error) {
-  console.warn('OpenAI client initialization failed:', error);
-}
+// OpenAI references removed - using only Gemini as requested by user
 
 export interface ExtractedCompanyDetails {
   companyName: string | null;
@@ -145,100 +133,15 @@ export async function parseDocumentForCompanyDetails(documentContent: string): P
       : documentContent;
 
     // Check if OpenAI is available, if not use fallback parsing
-    if (!openai) {
-      console.log('OpenAI not available, using fallback parsing logic...');
-      return parseWithFallbackLogic(truncatedContent);
-    }
-
-    const systemPrompt = `You are an expert document analyzer that extracts company information from business documents.
-
-Your task is to analyze the provided document and extract the following information:
-1. Company Name - The main company or organization mentioned
-2. Industry - The business sector/industry (e.g., Technology, Healthcare, Finance, Manufacturing)
-3. Contract Type - Type of document/agreement (e.g., Software License, Service Agreement, Employment Contract, Policy Document)
-4. Contact Email - Primary business email address
-5. Contact Phone - Primary business phone number  
-6. Address - Business address
-
-IMPORTANT RULES:
-- Only extract information that is clearly stated in the document
-- If information is unclear or not present, return null for that field
-- Be conservative - prefer null over guessing
-- For industry, use broad categories (Technology, Healthcare, Finance, Manufacturing, Legal, Consulting, Education, etc.)
-- For contract type, identify the document purpose (License Agreement, Service Contract, Employment Agreement, etc.)
-
-Respond ONLY with a valid JSON object in this exact format:
-{
-  "companyName": "string or null",
-  "industry": "string or null", 
-  "contractType": "string or null",
-  "contactEmail": "string or null",
-  "contactPhone": "string or null",
-  "address": "string or null",
-  "confidence": "high|medium|low"
-}`;
-
-    const userPrompt = `Please analyze this document and extract company information:
-
-${truncatedContent}`;
-
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4',
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt }
-      ],
-      temperature: 0.1, // Low temperature for consistent extraction
-      max_tokens: 500
-    });
-
-    const content = response.choices[0]?.message?.content;
-    if (!content) {
-      throw new Error('No response from OpenAI');
-    }
-
-
-    // Parse the JSON response
-    let parsed: any;
-    try {
-      parsed = JSON.parse(content);
-    } catch (parseError) {
-      console.error('Failed to parse OpenAI JSON response:', parseError);
-      // Try to extract JSON from response if it's wrapped in other text
-      const jsonMatch = content.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        parsed = JSON.parse(jsonMatch[0]);
-      } else {
-        throw new Error('Invalid JSON response from OpenAI');
-      }
-    }
-
-    // Validate and construct the result
-    const result: ExtractedCompanyDetails = {
-      companyName: parsed.companyName || null,
-      industry: parsed.industry || null,
-      contractType: parsed.contractType || null,
-      contactEmail: parsed.contactEmail || null,
-      contactPhone: parsed.contactPhone || null,
-      address: parsed.address || null,
-      confidence: parsed.confidence || 'low',
-      extractedText: truncatedContent
-    };
-
-    console.log('Extracted company details:', {
-      companyName: result.companyName,
-      industry: result.industry,
-      contractType: result.contractType,
-      confidence: result.confidence
-    });
-
-    return result;
+    // Using only fallback parsing logic as OpenAI references removed (Gemini-only mode)
+    console.log('Using fallback parsing logic (Gemini-only mode)...');
+    return parseWithFallbackLogic(truncatedContent);
 
   } catch (error) {
-    console.error('Error parsing document with OpenAI:', error);
+    console.error('Error parsing document:', error);
     console.log('Falling back to local parsing logic...');
     
-    // Use fallback parsing when OpenAI fails
+    // Use fallback parsing when processing fails
     try {
       const truncatedContent = documentContent.length > 15000 
         ? documentContent.substring(0, 15000) + '...[truncated]'
@@ -246,7 +149,7 @@ ${truncatedContent}`;
       return parseWithFallbackLogic(truncatedContent);
     } catch (fallbackError) {
       console.error('Fallback parsing also failed:', fallbackError);
-      // Only return empty result if both OpenAI and fallback fail
+      // Return empty result if parsing fails
       return {
         companyName: null,
         industry: null,
