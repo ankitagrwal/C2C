@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
-import { Check, FileText, Bot, FileSpreadsheet, CheckCircle } from 'lucide-react';
+import { Check, FileText, Bot, FileSpreadsheet, CheckCircle, Menu } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
+import { Sheet, SheetContent, SheetTrigger, SheetClose } from '@/components/ui/sheet';
 import { useToast } from '@/hooks/use-toast';
-import { useQuery } from '@tanstack/react-query';
 import type { Document, ProcessingJob, TestCase } from '@shared/schema';
 
 // Import step components
@@ -144,6 +144,10 @@ export default function DocumentsWizard({ onComplete, onCancel }: DocumentsWizar
     if (prevIndex >= 0) {
       setWizardState(prev => ({ ...prev, currentStep: WIZARD_STEPS[prevIndex].id }));
     }
+  };
+
+  const getCurrentStepNumber = (): number => {
+    return WIZARD_STEPS.findIndex(step => step.id === wizardState.currentStep) + 1;
   };
 
   const canNavigateToStep = (stepId: WizardStep): boolean => {
@@ -287,130 +291,195 @@ export default function DocumentsWizard({ onComplete, onCancel }: DocumentsWizar
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-6 space-y-8">
+    <div className="min-h-screen bg-background">
       {/* Wizard Header */}
-      <div className="text-center space-y-4">
-        <h1 className="text-3xl font-semibold" data-testid="text-wizard-title">
-          AI Test Case Generation Wizard
-        </h1>
-        <p className="text-muted-foreground">
-          Transform your business documents into comprehensive test cases in 4 simple steps
-        </p>
+      <div className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="px-6 py-8">
+          <div className="text-center space-y-4">
+            <h1 className="text-3xl font-semibold" data-testid="text-wizard-title">
+              AI Test Case Generation Wizard
+            </h1>
+            <p className="text-muted-foreground text-lg">
+              Transform your business documents into comprehensive test cases in 4 simple steps
+            </p>
+            {/* Overall Progress Bar */}
+            <div className="max-w-md mx-auto space-y-2 mt-6">
+              <div className="flex justify-between text-sm">
+                <span className="font-medium">Progress</span>
+                <span className="text-primary font-medium">{Math.round(progressPercentage)}% Complete</span>
+              </div>
+              <Progress value={progressPercentage} className="h-2" data-testid="progress-wizard" />
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* Enhanced Progress Indicators */}
-      <div className="space-y-4">
-        {/* Overall Progress Bar */}
-        <div className="space-y-2">
-          <div className="flex justify-between text-sm">
-            <span className="font-medium">Progress</span>
-            <span className="text-primary font-medium">{Math.round(progressPercentage)}% Complete</span>
+      {/* Main Content */}
+      <div className="flex min-h-[calc(100vh-140px)]">
+        {/* Desktop Sidebar - Hidden on Mobile */}
+        <div className="hidden md:block w-72 lg:w-80 bg-card border-r border-border flex-shrink-0">
+          <div className="p-6 space-y-2">
+            {WIZARD_STEPS.map((step, index) => {
+              const stepStatus = getStepStatus(step.id);
+              const Icon = step.icon;
+              
+              return (
+                <button
+                  key={step.id}
+                  onClick={() => canNavigateToStep(step.id) && goToStep(step.id)}
+                  disabled={!canNavigateToStep(step.id)}
+                  className={`w-full text-left p-5 rounded-lg transition-all duration-200 relative group ${
+                    stepStatus === 'current' 
+                      ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/25 ring-2 ring-primary/20 scale-[1.02]' 
+                      : stepStatus === 'completed'
+                      ? 'bg-chart-2/10 text-chart-2 hover-elevate border-l-4 border-chart-2'
+                      : stepStatus === 'available'
+                      ? 'hover-elevate border border-border hover:border-primary/30'
+                      : 'opacity-50 cursor-not-allowed'
+                  }`}
+                  data-testid={`button-step-${step.id}`}
+                >
+                  <div className="flex items-start space-x-4">
+                    <div className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center font-bold shadow-lg transition-all ${
+                      stepStatus === 'completed' ? 'bg-chart-2 text-background ring-2 ring-chart-2/30' :
+                      stepStatus === 'current' ? 'bg-primary-foreground text-primary ring-2 ring-primary-foreground/30' :
+                      'bg-background text-muted-foreground border-2 border-border group-hover:border-primary/30'
+                    }`}>
+                      {stepStatus === 'completed' ? <Check className="w-5 h-5" /> : step.stepNumber}
+                    </div>
+                    <div className="min-w-0 flex-1 space-y-1">
+                      <div className="flex items-center space-x-2 mb-2">
+                        <Icon className="w-5 h-5 flex-shrink-0" />
+                        <span className="font-semibold text-base">{step.title}</span>
+                      </div>
+                      <p className={`text-sm leading-relaxed ${
+                        stepStatus === 'current' ? 'opacity-90' : 'opacity-75'
+                      }`}>
+                        {step.description}
+                      </p>
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
           </div>
-          <Progress value={progressPercentage} className="h-3" data-testid="progress-wizard" />
         </div>
 
-        {/* Step Progress Indicators */}
-        <div className="flex items-center justify-center space-x-4">
-          {WIZARD_STEPS.map((step, index) => {
-            const stepStatus = getStepStatus(step.id);
-            const Icon = step.icon;
+        {/* Step Content */}
+        <div className="flex-1 bg-background">
+          {/* Mobile Navigation */}
+          <div className="md:hidden p-4 border-b">
+            <div className="flex items-center justify-between mb-4">
+              <Sheet>
+                <SheetTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <Menu className="w-4 h-4 mr-2" />
+                    Navigation
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="left" className="w-80">
+                  <div className="p-4 space-y-2 mt-4">
+                    <h3 className="font-semibold text-lg mb-4">Wizard Steps</h3>
+                    {WIZARD_STEPS.map((step, index) => {
+                      const stepStatus = getStepStatus(step.id);
+                      const Icon = step.icon;
+                      
+                      return (
+                        <SheetClose asChild key={step.id}>
+                          <button
+                            onClick={() => canNavigateToStep(step.id) && goToStep(step.id)}
+                            disabled={!canNavigateToStep(step.id)}
+                            className={`w-full text-left p-4 rounded-lg transition-all relative ${
+                              stepStatus === 'current' 
+                                ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/25' 
+                                : stepStatus === 'completed'
+                                ? 'bg-chart-2/10 text-chart-2 border-l-4 border-chart-2'
+                                : stepStatus === 'available'
+                                ? 'border border-border'
+                                : 'opacity-50 cursor-not-allowed'
+                            }`}
+                            data-testid={`button-step-mobile-${step.id}`}
+                          >
+                            <div className="flex items-start space-x-3">
+                              <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${
+                                stepStatus === 'completed' ? 'bg-chart-2 text-background' :
+                                stepStatus === 'current' ? 'bg-primary-foreground text-primary' :
+                                'bg-background text-muted-foreground border border-border'
+                              }`}>
+                                {stepStatus === 'completed' ? <Check className="w-4 h-4" /> : step.stepNumber}
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center space-x-2 mb-1">
+                                  <Icon className="w-4 h-4 flex-shrink-0" />
+                                  <span className="font-medium">{step.title}</span>
+                                </div>
+                                <p className="text-xs opacity-75 leading-relaxed">
+                                  {step.description}
+                                </p>
+                              </div>
+                            </div>
+                          </button>
+                        </SheetClose>
+                      );
+                    })}
+                  </div>
+                </SheetContent>
+              </Sheet>
+
+              <div className="text-sm font-medium text-primary">
+                Step {getCurrentStepNumber()} of {WIZARD_STEPS.length}
+              </div>
+            </div>
             
-            return (
-              <div key={step.id} className="flex items-center">
-                <div className={`flex flex-col items-center space-y-2 ${
-                  stepStatus === 'current' ? 'transform scale-110' : ''
-                }`}>
-                  <div className={`w-12 h-12 rounded-full flex items-center justify-center border-2 transition-all ${
-                    stepStatus === 'completed' 
-                      ? 'bg-chart-2 text-background border-chart-2' 
-                      : stepStatus === 'current'
-                      ? 'bg-primary text-primary-foreground border-primary shadow-lg shadow-primary/25'
-                      : stepStatus === 'available'
-                      ? 'border-primary/30 text-muted-foreground hover:border-primary/50'
-                      : 'border-border text-muted-foreground/50'
-                  }`}>
-                    {stepStatus === 'completed' ? (
-                      <Check className="w-5 h-5" />
-                    ) : (
-                      <Icon className="w-5 h-5" />
+            {/* Mobile Step Indicator */}
+            <div className="flex items-center space-x-1 overflow-x-auto pb-2">
+              {WIZARD_STEPS.map((step, index) => {
+                const stepStatus = getStepStatus(step.id);
+                const Icon = step.icon;
+                return (
+                  <div key={step.id} className="flex items-center flex-shrink-0">
+                    <div className={`flex flex-col items-center space-y-1 px-2 py-2 rounded-lg min-w-0 ${
+                      stepStatus === 'current' ? 'bg-primary/10' : ''
+                    }`}>
+                      <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs transition-all ${
+                        stepStatus === 'completed' 
+                          ? 'bg-chart-2 text-background' 
+                          : stepStatus === 'current'
+                          ? 'bg-primary text-primary-foreground'
+                          : stepStatus === 'available'
+                          ? 'border border-border text-muted-foreground'
+                          : 'border border-border text-muted-foreground/50'
+                      }`}>
+                        {stepStatus === 'completed' ? (
+                          <Check className="w-3 h-3" />
+                        ) : (
+                          <Icon className="w-3 h-3" />
+                        )}
+                      </div>
+                      <span className={`text-xs font-medium text-center truncate max-w-16 ${
+                        stepStatus === 'current' ? 'text-primary' :
+                        stepStatus === 'completed' ? 'text-chart-2' :
+                        'text-muted-foreground'
+                      }`}>
+                        {step.title}
+                      </span>
+                    </div>
+                    {index < WIZARD_STEPS.length - 1 && (
+                      <div className={`w-3 h-0.5 mx-1 flex-shrink-0 ${
+                        index < currentStepIndex ? 'bg-chart-2' : 'bg-border'
+                      }`} />
                     )}
                   </div>
-                  <span className={`text-xs text-center font-medium ${
-                    stepStatus === 'current' ? 'text-primary' :
-                    stepStatus === 'completed' ? 'text-chart-2' :
-                    'text-muted-foreground'
-                  }`}>
-                    {step.title}
-                  </span>
-                </div>
-                {index < WIZARD_STEPS.length - 1 && (
-                  <div className={`w-16 h-0.5 mx-4 ${
-                    index < currentStepIndex ? 'bg-chart-2' : 'bg-border'
-                  }`} />
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      <Card>
-        <CardContent className="p-0">
-          <div className="grid grid-cols-1 lg:grid-cols-4 min-h-[600px]">
-            {/* Step Navigation Sidebar */}
-            <div className="bg-muted/30 p-6 border-r">
-              <div className="space-y-1">
-                {WIZARD_STEPS.map((step, index) => {
-                  const stepStatus = getStepStatus(step.id);
-                  const Icon = step.icon;
-                  
-                  return (
-                    <button
-                      key={step.id}
-                      onClick={() => canNavigateToStep(step.id) && goToStep(step.id)}
-                      disabled={!canNavigateToStep(step.id)}
-                      className={`w-full text-left p-4 rounded-lg transition-all relative ${
-                        stepStatus === 'current' 
-                          ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/25 ring-2 ring-primary/20' 
-                          : stepStatus === 'completed'
-                          ? 'bg-chart-2/10 text-chart-2 hover-elevate border-l-4 border-chart-2'
-                          : stepStatus === 'available'
-                          ? 'hover-elevate border border-border'
-                          : 'opacity-50 cursor-not-allowed'
-                      }`}
-                      data-testid={`button-step-${step.id}`}
-                    >
-                      <div className="flex items-start space-x-3">
-                        <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shadow-sm ${
-                          stepStatus === 'completed' ? 'bg-chart-2 text-background ring-2 ring-chart-2/30' :
-                          stepStatus === 'current' ? 'bg-primary-foreground text-primary ring-2 ring-primary-foreground/30' :
-                          'bg-background text-muted-foreground border border-border'
-                        }`}>
-                          {stepStatus === 'completed' ? <Check className="w-4 h-4" /> : step.stepNumber}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center space-x-2 mb-1">
-                            <Icon className="w-4 h-4 flex-shrink-0" />
-                            <span className="font-medium truncate">{step.title}</span>
-                          </div>
-                          <p className="text-xs opacity-75 leading-relaxed">
-                            {step.description}
-                          </p>
-                        </div>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Step Content */}
-            <div className="lg:col-span-3 p-6">
-              {renderStepContent()}
+                );
+              })}
             </div>
           </div>
-        </CardContent>
-      </Card>
+
+          <div className="p-4 md:p-8">
+            {renderStepContent()}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
