@@ -1,0 +1,45 @@
+"Add a floating AI chatbot assistant to my Clause2Case application using Gemini 2.0 Flash API with these specific features:
+
+**Chatbot Widget Design:**
+- Floating chat bubble in bottom-right corner with Clause2Case branding
+- Expandable chat window matching the dark theme with blue accents
+- Clean, modern interface consistent with existing UI
+
+**Context-Aware Capabilities:**
+The chatbot should understand and help with:
+
+1. **Navigation & Platform Help:**
+   - Guide users through Dashboard, Internal Tools, Customers, Documents, Test Cases, AI Processing sections
+   - Explain the 4-step wizard: Upload Documents → AI Processing → Manual Addition → Review & Submit
+   - Help interpret dashboard metrics (47 documents, 1,284 test cases, 12 active customers)
+
+2. **Document Management:**
+   - Assist with document upload (PDF, DOC, DOCX, TXT - max 5 files, 20MB each)
+   - Explain supported formats and file size limits
+   - Guide through document processing workflow
+
+3. **Test Case Generation:**
+   - Help choose between AI Processing vs Manual Addition
+   - Explain test case categories: Functional, Compliance, Edge Cases, Integration
+   - Assist with test case filtering and status management
+   - Guide through CSV template usage for manual additions
+
+4. **System Operations:**
+   - Explain Internal Tools (PMAP, Navigator, Validator)
+   - Help with system monitoring and reliability metrics
+   - Assist with understanding processing jobs and system status
+
+5. **Smart Responses:**
+   - "How do I upload documents?" → Guide to Documents section and wizard
+   - "What's the difference between AI and manual test generation?" → Explain both approaches
+   - "Show me my test cases" → Direct to Test Cases section with filtering tips
+   - "How is my system performing?" → Interpret dashboard metrics and system status
+   - "What are Internal Tools?" → Explain PMAP, Navigator, Validator functionality
+
+**Technical Implementation:**
+```javascript
+const genAI = new GoogleGenerativeAI('YOUR_API_KEY');
+const model = genAI.getGenerativeModel({ 
+  model: "gemini-2.0-flash",
+  systemInstruction: `You are the Clause2Case AI assistant. Help users navigate this test case generation platform. Key features: 4-step wizard for document upload and test case generation, support for AI and manual test creation, dashboard analytics, internal tools (PMAP, Navigator, Validator), and multi-customer support. Always provide specific, actionable guidance.`
+});
