@@ -1551,22 +1551,91 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }).parse(req.body);
 
         const csvContent = req.file.buffer.toString('utf-8');
-        const lines = csvContent.split('\n').filter(line => line.trim());
         
-        if (lines.length < 2) {
+        // Parse CSV content with proper handling of quoted fields, commas, and multiline content
+        const parseCSV = (content: string): string[][] => {
+          const rows: string[][] = [];
+          const lines = content.split(/\r?\n/);
+          let currentRow: string[] = [];
+          let currentField = '';
+          let inQuotes = false;
+          let rowStarted = false;
+          
+          for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
+            const line = lines[lineIndex];
+            
+            // Skip completely empty lines when not in quotes
+            if (!line.trim() && !inQuotes) {
+              continue;
+            }
+            
+            for (let i = 0; i < line.length; i++) {
+              const char = line[i];
+              rowStarted = true;
+              
+              if (char === '"') {
+                if (inQuotes && line[i + 1] === '"') {
+                  // Escaped quote
+                  currentField += '"';
+                  i++; // Skip next quote
+                } else {
+                  // Toggle quote state
+                  inQuotes = !inQuotes;
+                }
+              } else if (char === ',' && !inQuotes) {
+                // Field separator
+                currentRow.push(currentField.trim());
+                currentField = '';
+              } else {
+                currentField += char;
+              }
+            }
+            
+            // Add newline to field if we're inside quotes (multiline content)
+            if (inQuotes && lineIndex < lines.length - 1) {
+              currentField += '\n';
+            }
+            
+            // If we're not in quotes and have started a row, end the row
+            if (!inQuotes && rowStarted) {
+              currentRow.push(currentField.trim());
+              if (currentRow.some(field => field)) { // Only add non-empty rows
+                rows.push(currentRow);
+              }
+              currentRow = [];
+              currentField = '';
+              rowStarted = false;
+            }
+          }
+          
+          // Handle last field/row if needed
+          if (rowStarted) {
+            currentRow.push(currentField.trim());
+            if (currentRow.some(field => field)) {
+              rows.push(currentRow);
+            }
+          }
+          
+          return rows;
+        };
+        
+        const rows = parseCSV(csvContent);
+        
+        if (rows.length < 2) {
           return res.status(400).json({ 
             error: 'CSV file must contain header row and at least one data row',
             code: 'INVALID_CSV_FORMAT' 
           });
         }
 
-        const headers = lines[0].split(',').map(h => h.replace(/"/g, '').trim());
-        const requiredHeaders = ['title', 'description', 'category', 'priority'];
+        // Parse header row
+        const headers = rows[0].map(h => h.trim().toLowerCase());
+        const requiredHeaders = ['title', 'description'];
         
         for (const required of requiredHeaders) {
           if (!headers.includes(required)) {
             return res.status(400).json({ 
-              error: `Missing required CSV column: ${required}`,
+              error: `Missing required CSV column: ${required}. Found columns: ${headers.join(', ')}`,
               code: 'MISSING_CSV_COLUMN' 
             });
           }
@@ -1575,27 +1644,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const createdTestCases = [];
         const errors = [];
 
-        for (let i = 1; i < lines.length; i++) {
+        // Process each data row (starting from index 1, after header)
+        for (let i = 1; i < rows.length; i++) {
           try {
-            const values = lines[i].split(',').map(v => v.replace(/"/g, '').trim());
+            const values = rows[i];
             const rowData: { [key: string]: string } = {};
             
+            // Map values to headers
             headers.forEach((header, idx) => {
               rowData[header] = values[idx] || '';
             });
 
+            // Validate required fields
             if (!rowData['title'] || !rowData['description']) {
               errors.push(`Row ${i + 1}: Missing title or description`);
               continue;
             }
 
+            // Skip completely empty rows
+            if (Object.values(rowData).every(val => !val.trim())) {
+              continue;
+            }
+
+            // Build test case content from available fields
+            const contentParts = [`${rowData['title']}`];
+            
+            if (rowData['description']) {
+              contentParts.push(`\nDescription: ${rowData['description']}`);
+            }
+            
+            if (rowData['preconditions']) {
+              contentParts.push(`\nPreconditions: ${rowData['preconditions']}`);
+            }
+            
+            if (rowData['steps']) {
+              contentParts.push(`\nSteps:\n${rowData['steps']}`);
+            }
+            
+            if (rowData['expected_result'] || rowData['expectedresult'] || rowData['expected result']) {
+              const expectedResult = rowData['expected_result'] || rowData['expectedresult'] || rowData['expected result'];
+              contentParts.push(`\nExpected Result: ${expectedResult}`);
+            }
+
             const testCaseData = {
               documentId: validatedData.documentId || null,
               title: rowData['title'],
-              content: `${rowData['title']}\n\nDescription: ${rowData['description']}\n\nPreconditions: ${rowData['preconditions'] || 'None'}\n\nSteps:\n${rowData['steps'] || 'See description'}\n\nExpected Result: ${rowData['expected_result'] || 'See description'}`,
+              content: contentParts.join(''),
               category: rowData['category'] || 'Manual',
-              priority: ['low', 'medium', 'high'].includes(rowData['priority']?.toLowerCase()) ? rowData['priority'].toLowerCase() : 'medium',
-              source: 'manual'
+              priority: (['low', 'medium', 'high'].includes(rowData['priority']?.toLowerCase())) ? rowData['priority'].toLowerCase() as 'low' | 'medium' | 'high' : 'medium',
+              source: 'manual' as const
             };
 
             const testCase = await storage.createTestCase(testCaseData);
