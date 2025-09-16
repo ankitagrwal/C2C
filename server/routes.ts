@@ -885,6 +885,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Template download route - MUST be before :id route to avoid collision
+  app.get('/api/test-cases/template.csv', requireAuth, (req: AuthenticatedRequest, res) => {
+    const industry = req.query.industry as string || 'General';
+    
+    const csvTemplate = `title,description,category,priority,preconditions,steps,expected_result,source
+"Login Functionality Test","Verify user can login with valid credentials","Functional","high","User has valid account","1. Navigate to login page\n2. Enter username and password\n3. Click login button","User is successfully logged in","manual"
+"Password Reset Test","Verify password reset functionality","Functional","medium","User account exists","1. Click forgot password\n2. Enter email address\n3. Check email for reset link","Reset email is received","manual"
+"Data Validation Test","Verify form validates required fields","Compliance","high","Form is accessible","1. Leave required field empty\n2. Submit form","Error message appears","manual"
+"Performance Load Test","Verify system handles expected load","Performance","medium","Test environment ready","1. Simulate 100 concurrent users\n2. Monitor response times","Response time under 2 seconds","manual"
+"${industry} Specific Test","Industry-specific functionality test","Integration","medium","${industry} module configured","1. Access ${industry.toLowerCase()} features\n2. Perform typical workflow","Workflow completes successfully","manual"`;
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename="test-cases-template-${industry.toLowerCase()}.csv"`);
+    res.send(csvTemplate);
+  });
+
   app.get('/api/test-cases/:id', requireAuth, async (req, res) => {
     try {
       validateParams(uuidParamSchema, req.params);
@@ -1496,21 +1512,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Step 3: Download CSV template for manual test case entry
-  app.get('/api/test-cases/template.csv', requireAuth, (req: AuthenticatedRequest, res) => {
-    const industry = req.query.industry as string || 'General';
-    
-    const csvTemplate = `title,description,category,priority,preconditions,steps,expected_result,source
-"Login Functionality Test","Verify user can login with valid credentials","Functional","high","User has valid account","1. Navigate to login page\n2. Enter username and password\n3. Click login button","User is successfully logged in","manual"
-"Password Reset Test","Verify password reset functionality","Functional","medium","User account exists","1. Click forgot password\n2. Enter email address\n3. Check email for reset link","Reset email is received","manual"
-"Data Validation Test","Verify form validates required fields","Compliance","high","Form is accessible","1. Leave required field empty\n2. Submit form","Error message appears","manual"
-"Performance Load Test","Verify system handles expected load","Performance","medium","Test environment ready","1. Simulate 100 concurrent users\n2. Monitor response times","Response time under 2 seconds","manual"
-"${industry} Specific Test","Industry-specific functionality test","Integration","medium","${industry} module configured","1. Access ${industry.toLowerCase()} features\n2. Perform typical workflow","Workflow completes successfully","manual"`;
-
-    res.setHeader('Content-Type', 'text/csv');
-    res.setHeader('Content-Disposition', `attachment; filename="test-cases-template-${industry.toLowerCase()}.csv"`);
-    res.send(csvTemplate);
-  });
+// MOVED TO EARLIER POSITION TO AVOID ROUTE COLLISION
 
   // Step 3: Upload CSV file with manual test cases
   app.post('/api/test-cases/upload-csv', requireAuth, requireCSRFToken,
