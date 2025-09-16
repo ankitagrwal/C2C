@@ -12,6 +12,7 @@ import type { TestCase } from '@shared/schema';
 
 interface ManualCSVStepProps {
   onComplete: (testCases: TestCase[]) => void;
+  onSkip?: () => void; // New prop to handle skipping manual upload
   initialTestCases?: TestCase[];
   industry?: string;
   documentId?: string;
@@ -71,6 +72,7 @@ const CSV_TEMPLATES: CSVTemplate[] = [
 
 export default function ManualCSVStep({ 
   onComplete, 
+  onSkip,
   initialTestCases = [], 
   industry = 'General',
   documentId
@@ -486,6 +488,35 @@ export default function ManualCSVStep({
                   </Button>
                 </div>
               ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Continue/Skip Section */}
+      {onSkip && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <CheckCircle className="w-5 h-5 text-chart-2" />
+              <span>Continue to Review</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              {uploadedTestCases.length > 0 
+                ? `You have added ${uploadedTestCases.length} manual test case${uploadedTestCases.length !== 1 ? 's' : ''}. You can continue to review and submit, or add more test cases.`
+                : 'You can skip manual test case upload and continue with only AI-generated test cases, or add CSV files using the sections above.'
+              }
+            </p>
+            <div className="flex justify-center">
+              <Button 
+                onClick={onSkip}
+                data-testid="button-continue-to-review"
+              >
+                <CheckCircle className="w-4 h-4 mr-2" />
+                {uploadedTestCases.length > 0 ? 'Continue to Review' : 'Skip Manual Upload'}
+              </Button>
             </div>
           </CardContent>
         </Card>

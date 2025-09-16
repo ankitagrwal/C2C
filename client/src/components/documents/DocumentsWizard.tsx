@@ -4,6 +4,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
+import { useToast } from '@/hooks/use-toast';
 import type { Document, ProcessingJob, TestCase } from '@shared/schema';
 
 // Import step components
@@ -69,6 +70,7 @@ const WIZARD_STEPS = [
 ] as const;
 
 export default function DocumentsWizard({ onComplete, onCancel }: DocumentsWizardProps) {
+  const { toast } = useToast();
   const [wizardState, setWizardState] = useState<WizardState>({
     currentStep: 'upload',
     uploadedDocuments: [],
@@ -119,8 +121,10 @@ export default function DocumentsWizard({ onComplete, onCancel }: DocumentsWizar
       case 'processing':
         return wizardState.uploadedDocuments.length > 0;
       case 'manual':
-        return wizardState.processingJobs.some(job => job.status === 'completed');
+        // Can navigate to manual step if either documents are uploaded OR processing is completed/skipped
+        return wizardState.uploadedDocuments.length > 0;
       case 'review':
+        // Can navigate to review only if we have test cases from either AI or manual sources
         return wizardState.allTestCases.length > 0;
       default:
         return stepIndex <= currentStepIndex;
@@ -170,6 +174,15 @@ export default function DocumentsWizard({ onComplete, onCancel }: DocumentsWizar
                 currentStep: 'manual'
               });
             }}
+            onSkip={() => {
+              // Skip AI processing - go directly to manual step with empty AI results
+              handleStepComplete({
+                processingJobs: [],
+                allTestCases: [...wizardState.manualTestCases],
+                aiGeneratedCount: 0,
+                currentStep: 'manual'
+              });
+            }}
             initialJobs={wizardState.processingJobs}
             targetMin={80}
             targetMax={120}
@@ -181,16 +194,42 @@ export default function DocumentsWizard({ onComplete, onCancel }: DocumentsWizar
         return (
           <ManualCSVStep 
             onComplete={(testCases) => {
-              const updatedManualTestCases = [...wizardState.manualTestCases, ...testCases];
+              // Treat testCases as the authoritative manual test case list (no duplication)
+              const manualIds = new Set(testCases.map(tc => tc.id));
               const processingTestCases = wizardState.allTestCases.filter(tc => 
-                !wizardState.manualTestCases.some(mtc => mtc.id === tc.id)
+                tc.source !== 'manual' && !manualIds.has(tc.id)
               );
+              const newAllTestCases = [...processingTestCases, ...testCases];
+              
               handleStepComplete({
-                manualTestCases: updatedManualTestCases,
-                allTestCases: [...processingTestCases, ...updatedManualTestCases],
-                manualCount: updatedManualTestCases.length,  // Track manual count
+                manualTestCases: testCases,  // Use authoritative list from ManualCSVStep
+                allTestCases: newAllTestCases,
+                manualCount: testCases.length,  // Track manual count from authoritative list
                 currentStep: 'review'
               });
+            }}
+            onSkip={() => {
+              // Skip manual upload - check if we have any test cases before proceeding to review
+              const manualIds = new Set(wizardState.manualTestCases.map(tc => tc.id));
+              const processingTestCases = wizardState.allTestCases.filter(tc => 
+                tc.source !== 'manual' && !manualIds.has(tc.id)
+              );
+              const newAllTestCases = [...processingTestCases, ...wizardState.manualTestCases];
+              
+              // Only proceed to review if we have test cases
+              if (newAllTestCases.length > 0) {
+                handleStepComplete({
+                  allTestCases: newAllTestCases,
+                  currentStep: 'review'
+                });
+              } else {
+                // Show message and stay on manual step
+                toast({
+                  title: 'No Test Cases Available',
+                  description: 'Please either generate AI test cases or upload manual test cases before proceeding to review.',
+                  variant: 'destructive',
+                });
+              }
             }}
             initialTestCases={wizardState.manualTestCases}
             industry={wizardState.customer.industry || 'General'}

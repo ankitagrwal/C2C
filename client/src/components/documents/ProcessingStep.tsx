@@ -15,6 +15,7 @@ import type { Document, ProcessingJob, TestCase } from '@shared/schema';
 interface ProcessingStepProps {
   documents: Document[];
   onComplete: (testCases: TestCase[], jobs: ProcessingJob[]) => void;
+  onSkip?: () => void; // New prop to handle skipping AI processing
   initialJobs?: ProcessingJob[];
   targetMin?: number;
   targetMax?: number;
@@ -30,6 +31,7 @@ interface JobStatus {
 export default function ProcessingStep({ 
   documents,
   onComplete,
+  onSkip,
   initialJobs = [],
   targetMin = 80,
   targetMax = 120,
@@ -201,12 +203,9 @@ export default function ProcessingStep({
     return status?.job.status === 'failed';
   });
 
-  // Start processing or polling based on initial state
+  // Only enable polling for existing jobs (no auto-start)
   useEffect(() => {
-    if (documents.length > 0 && processingJobs.length === 0 && !startProcessingMutation.isPending) {
-      // Auto-start processing when component mounts with documents but no jobs
-      startProcessingMutation.mutate();
-    } else if (processingJobs.length > 0) {
+    if (processingJobs.length > 0) {
       // Enable polling for existing jobs (resume scenario)
       const hasIncompleteJobs = processingJobs.some(job => 
         job.status !== 'completed' && job.status !== 'failed'
@@ -215,7 +214,7 @@ export default function ProcessingStep({
         setIsPolling(true);
       }
     }
-  }, [documents.length, processingJobs.length, startProcessingMutation]);
+  }, [processingJobs.length]);
 
   const hasStarted = processingJobs.length > 0 || startProcessingMutation.isPending;
   const isProcessing = isPolling || startProcessingMutation.isPending;
@@ -297,23 +296,36 @@ export default function ProcessingStep({
               <p className="text-muted-foreground mb-4">
                 Click below to start AI analysis of your {documents.length} document{documents.length !== 1 ? 's' : ''}
               </p>
-              <Button 
-                onClick={() => startProcessingMutation.mutate()}
-                disabled={startProcessingMutation.isPending}
-                data-testid="button-start-processing"
-              >
-                {startProcessingMutation.isPending ? (
-                  <>
-                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                    Starting...
-                  </>
-                ) : (
-                  <>
-                    <Bot className="w-4 h-4 mr-2" />
-                    Start AI Processing
-                  </>
+              <div className="flex justify-center space-x-4">
+                <Button 
+                  onClick={() => startProcessingMutation.mutate()}
+                  disabled={startProcessingMutation.isPending}
+                  data-testid="button-start-processing"
+                >
+                  {startProcessingMutation.isPending ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                      Starting...
+                    </>
+                  ) : (
+                    <>
+                      <Bot className="w-4 h-4 mr-2" />
+                      Start AI Processing
+                    </>
+                  )}
+                </Button>
+                
+                {onSkip && (
+                  <Button 
+                    variant="outline"
+                    onClick={onSkip}
+                    disabled={startProcessingMutation.isPending}
+                    data-testid="button-skip-processing"
+                  >
+                    Skip AI Processing
+                  </Button>
                 )}
-              </Button>
+              </div>
             </div>
           ) : (
             <>
