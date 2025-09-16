@@ -63,7 +63,7 @@ export default function DashboardOverview() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-semibold">Dashboard</h1>
-          <p className="text-muted-foreground">AI Test Case Generation Platform Overview</p>
+          <p className="text-muted-foreground">AI Test Case Generation Platform</p>
         </div>
       </div>
 

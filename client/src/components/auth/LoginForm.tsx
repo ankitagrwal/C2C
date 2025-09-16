@@ -60,7 +60,7 @@ export default function LoginForm({ onLogin, isLoading = false, error }: LoginFo
           </div>
           <CardTitle className="text-2xl font-semibold">Clause2Case</CardTitle>
           <CardDescription>
-            AI Test Case Generation Platform
+            Transform business documents into comprehensive test cases
             <br />
             <span className="text-xs text-muted-foreground">Admin Access Required</span>
           </CardDescription>
