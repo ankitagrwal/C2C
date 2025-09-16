@@ -1,17 +1,19 @@
 // OpenAI removed - using only Gemini as requested
-import { GoogleGenerativeAI } from '@google/generative-ai';
-import mammoth from 'mammoth';
-import { parse } from 'node-html-parser';
-import crypto from 'crypto';
+import { GoogleGenerativeAI } from "@google/generative-ai";
+import mammoth from "mammoth";
+import { parse } from "node-html-parser";
+import crypto from "crypto";
 
 // Initialize AI clients - GEMINI ONLY as requested by user
 
 // Initialize Gemini client with proper SDK
 // Only initialize if API key is available
-const gemini = process.env.GEMINI_API_KEY ? new GoogleGenerativeAI(process.env.GEMINI_API_KEY) : null;
+const gemini = process.env.GEMINI_API_KEY
+  ? new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
+  : null;
 
 // AI Provider configuration - GEMINI ONLY
-export type AIProvider = 'gemini';
+export type AIProvider = "gemini";
 
 export interface AIProviderConfig {
   provider: AIProvider;
@@ -37,8 +39,8 @@ export interface TestCaseGenerationResult {
   testCases: Array<{
     title: string;
     description: string;
-    category: 'functional' | 'compliance' | 'integration' | 'edge_case';
-    priority: 'high' | 'medium' | 'low';
+    category: "functional" | "compliance" | "integration" | "edge_case";
+    priority: "high" | "medium" | "low";
     steps: string[];
     expectedResult: string;
     tags: string[];
@@ -52,64 +54,75 @@ export interface TestCaseGenerationResult {
 /**
  * Extract text content from various file formats
  */
-export async function extractTextFromFile(buffer: Buffer, filename: string): Promise<string> {
-  const extension = filename.toLowerCase().split('.').pop();
-  
+export async function extractTextFromFile(
+  buffer: Buffer,
+  filename: string,
+): Promise<string> {
+  const extension = filename.toLowerCase().split(".").pop();
+
   try {
     switch (extension) {
-      case 'pdf':
+      case "pdf":
         // Dynamic import to avoid the pdf-parse test file issue
-        const pdfParse = await import('pdf-parse');
+        const pdfParse = await import("pdf-parse");
         const pdfData = await pdfParse.default(buffer);
         return pdfData.text;
-        
-      case 'docx':
+
+      case "docx":
         const docResult = await mammoth.extractRawText({ buffer });
         return docResult.value;
-        
-      case 'doc':
+
+      case "doc":
         // Legacy .doc format is not supported by mammoth - only .docx
-        throw new Error('Legacy .doc format is not supported. Please convert to .docx format and re-upload.');
-        
-      case 'txt':
-        return buffer.toString('utf-8');
-        
-      case 'html':
-      case 'htm':
-        const htmlContent = buffer.toString('utf-8');
+        throw new Error(
+          "Legacy .doc format is not supported. Please convert to .docx format and re-upload.",
+        );
+
+      case "txt":
+        return buffer.toString("utf-8");
+
+      case "html":
+      case "htm":
+        const htmlContent = buffer.toString("utf-8");
         const root = parse(htmlContent);
         return root.text;
-        
+
       default:
         throw new Error(`Unsupported file format: ${extension}`);
     }
   } catch (error) {
     console.error(`Error extracting text from ${filename}:`, error);
-    throw new Error(`Failed to extract text from ${filename}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    throw new Error(
+      `Failed to extract text from ${filename}: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
   }
 }
 
 /**
  * Split document text into chunks for embedding
  */
-export function chunkDocument(text: string, chunkSize: number = 1000, overlap: number = 200): string[] {
+export function chunkDocument(
+  text: string,
+  chunkSize: number = 1000,
+  overlap: number = 200,
+): string[] {
   if (text.length <= chunkSize) {
     return [text];
   }
-  
+
   const chunks: string[] = [];
   let start = 0;
-  
+
   while (start < text.length) {
     const end = Math.min(start + chunkSize, text.length);
     const chunk = text.slice(start, end);
-    
+
     // Try to break at sentence boundaries
     if (end < text.length) {
-      const lastSentence = chunk.lastIndexOf('.');
-      const lastNewline = chunk.lastIndexOf('\n');
+      const lastSentence = chunk.lastIndexOf(".");
+      const lastNewline = chunk.lastIndexOf("\n");
       const breakPoint = Math.max(lastSentence, lastNewline);
-      
+
       if (breakPoint > start + chunkSize * 0.5) {
         chunks.push(text.slice(start, breakPoint + 1).trim());
         start = breakPoint + 1 - overlap;
@@ -121,12 +134,12 @@ export function chunkDocument(text: string, chunkSize: number = 1000, overlap: n
       chunks.push(chunk.trim());
       break;
     }
-    
+
     // Ensure we don't go backward
     start = Math.max(start, chunks.length > 1 ? start : end - overlap);
   }
-  
-  return chunks.filter(chunk => chunk.length > 50); // Filter out very short chunks
+
+  return chunks.filter((chunk) => chunk.length > 50); // Filter out very short chunks
 }
 
 /**
@@ -134,14 +147,20 @@ export function chunkDocument(text: string, chunkSize: number = 1000, overlap: n
  */
 export async function generateEmbeddings(texts: string[]): Promise<number[][]> {
   if (texts.length === 0) return [];
-  
+
   try {
     // Using simple embeddings for Gemini-only mode as requested by user
-    console.log('Using simple embeddings for Gemini-only mode');
-    return texts.map(() => Array(1536).fill(0).map(() => Math.random() - 0.5));
+    console.log("Using simple embeddings for Gemini-only mode");
+    return texts.map(() =>
+      Array(1536)
+        .fill(0)
+        .map(() => Math.random() - 0.5),
+    );
   } catch (error) {
-    console.error('Error generating embeddings:', error);
-    throw new Error(`Failed to generate embeddings: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    console.error("Error generating embeddings:", error);
+    throw new Error(
+      `Failed to generate embeddings: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
   }
 }
 
@@ -151,7 +170,7 @@ export async function generateEmbeddings(texts: string[]): Promise<number[][]> {
 export async function extractDocumentMetadata(
   documentContent: string,
   filename: string,
-  config: AIProviderConfig = { provider: 'gemini' }
+  config: AIProviderConfig = { provider: "gemini" },
 ): Promise<DocumentMetadata> {
   const prompt = `Analyze this business document and extract key metadata. Focus on identifying:
 
@@ -173,28 +192,35 @@ Respond in JSON format:
   try {
     // Using ONLY Gemini as requested by user
     if (!gemini) {
-      throw new Error('Gemini client not initialized. Please configure GEMINI_API_KEY.');
+      throw new Error(
+        "Gemini client not initialized. Please configure GEMINI_API_KEY.",
+      );
     }
-    
-    const model = gemini.getGenerativeModel({ model: config.model || "gemini-2.0-flash" });
+
+    const model = gemini.getGenerativeModel({
+      model: "gemini-2.0-flash",
+    });
     const response = await model.generateContent([prompt]);
-    
-    let text = response.response.text() || '{}';
+
+    let text = response.response.text() || "{}";
     // Strip markdown code blocks from Gemini response
-    text = text.replace(/```json\s*/g, '').replace(/```\s*$/g, '').trim();
-    
+    text = text
+      .replace(/```json\s*/g, "")
+      .replace(/```\s*$/g, "")
+      .trim();
+
     const result = JSON.parse(text);
     return {
       customerName: result.customerName || undefined,
       documentType: result.documentType || undefined,
       industry: result.industry || undefined,
-      extractedAt: new Date().toISOString()
+      extractedAt: new Date().toISOString(),
     };
   } catch (error) {
-    console.error('Error extracting document metadata:', error);
+    console.error("Error extracting document metadata:", error);
     // Return partial metadata on error
     return {
-      extractedAt: new Date().toISOString()
+      extractedAt: new Date().toISOString(),
     };
   }
 }
@@ -204,19 +230,19 @@ Respond in JSON format:
  */
 export function cosineSimilarity(a: number[], b: number[]): number {
   if (a.length !== b.length) return 0;
-  
+
   let dotProduct = 0;
   let normA = 0;
   let normB = 0;
-  
+
   for (let i = 0; i < a.length; i++) {
     dotProduct += a[i] * b[i];
     normA += a[i] * a[i];
     normB += b[i] * b[i];
   }
-  
+
   if (normA === 0 || normB === 0) return 0;
-  
+
   return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
 }
 
@@ -228,18 +254,18 @@ export function findRelevantChunks(
   queryEmbedding: number[],
   chunks: DocumentChunk[],
   maxChunks: number = 5,
-  similarityThreshold: number = 0.7
+  similarityThreshold: number = 0.7,
 ): DocumentChunk[] {
-  const similarities = chunks.map(chunk => ({
+  const similarities = chunks.map((chunk) => ({
     chunk,
-    similarity: cosineSimilarity(queryEmbedding, chunk.embedding)
+    similarity: cosineSimilarity(queryEmbedding, chunk.embedding),
   }));
-  
+
   return similarities
-    .filter(item => item.similarity >= similarityThreshold)
+    .filter((item) => item.similarity >= similarityThreshold)
     .sort((a, b) => b.similarity - a.similarity)
     .slice(0, maxChunks)
-    .map(item => item.chunk);
+    .map((item) => item.chunk);
 }
 
 /**
@@ -250,21 +276,21 @@ export async function generateTestCases(
   documentType: string,
   relevantChunks: DocumentChunk[],
   requirements?: string,
-  config: AIProviderConfig = { provider: 'gemini' }
+  config: AIProviderConfig = { provider: "gemini" },
 ): Promise<TestCaseGenerationResult> {
   const startTime = Date.now();
-  
+
   // Prepare context from relevant chunks
   const context = relevantChunks
     .map((chunk, index) => `Context ${index + 1}:\n${chunk.content}`)
-    .join('\n\n');
-  
+    .join("\n\n");
+
   const systemPrompt = `You are an expert QA engineer specializing in enterprise test case generation. Your task is to analyze business documents and generate comprehensive, actionable test cases.
 
 DOCUMENT ANALYSIS CONTEXT:
 - Document: ${documentTitle}
 - Type: ${documentType}
-- Additional Requirements: ${requirements || 'Standard test coverage'}
+- Additional Requirements: ${requirements || "Standard test coverage"}
 
 RESPONSE FORMAT:
 Generate test cases in this exact JSON format:
@@ -306,38 +332,56 @@ Generate test cases that thoroughly validate the requirements, processes, and po
 
     // Using ONLY Gemini as requested by user
     if (!gemini) {
-      throw new Error('Gemini client not initialized. Please configure GEMINI_API_KEY.');
+      throw new Error(
+        "Gemini client not initialized. Please configure GEMINI_API_KEY.",
+      );
     }
-    
-    const model = gemini.getGenerativeModel({ model: config.model || "gemini-2.0-flash" });
+
+    const model = gemini.getGenerativeModel({
+      model: "gemini-2.0-flash",
+    });
     const prompt = `${systemPrompt}\n\n${userPrompt}`;
     const response = await model.generateContent([prompt]);
 
-    content = response.response.text() || '';
+    content = response.response.text() || "";
     if (!content) {
-      throw new Error('No content in Gemini response');
+      throw new Error("No content in Gemini response");
     }
-    
+
     // Strip markdown code blocks from Gemini response
-    content = content.replace(/```json\s*/g, '').replace(/```\s*$/g, '').trim();
+    content = content
+      .replace(/```json\s*/g, "")
+      .replace(/```\s*$/g, "")
+      .trim();
 
     result = JSON.parse(content);
     const processingTime = Date.now() - startTime;
 
     // Extract metadata from document content
-    const extractedText = relevantChunks.map(chunk => chunk.content).join('\n');
-    const metadata = await extractDocumentMetadata(extractedText, documentTitle, config);
+    const extractedText = relevantChunks
+      .map((chunk) => chunk.content)
+      .join("\n");
+    const metadata = await extractDocumentMetadata(
+      extractedText,
+      documentTitle,
+      config,
+    );
 
     return {
       testCases: result.testCases || [],
       metadata,
-      contextUsed: relevantChunks.map(chunk => `Chunk ${chunk.chunkIndex}: ${chunk.content.slice(0, 100)}...`),
+      contextUsed: relevantChunks.map(
+        (chunk) =>
+          `Chunk ${chunk.chunkIndex}: ${chunk.content.slice(0, 100)}...`,
+      ),
       processingTime,
-      aiProvider: config.provider
+      aiProvider: config.provider,
     };
   } catch (error) {
-    console.error('Error generating test cases:', error);
-    throw new Error(`Failed to generate test cases: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    console.error("Error generating test cases:", error);
+    throw new Error(
+      `Failed to generate test cases: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
   }
 }
 
@@ -348,9 +392,9 @@ export async function processDocumentForTestGeneration(
   buffer: Buffer,
   filename: string,
   documentId: string,
-  documentType: string = 'business_document',
+  documentType: string = "business_document",
   requirements?: string,
-  config: AIProviderConfig = { provider: 'gemini' }
+  config: AIProviderConfig = { provider: "gemini" },
 ): Promise<{
   extractedText: string;
   chunks: DocumentChunk[];
@@ -360,26 +404,26 @@ export async function processDocumentForTestGeneration(
     // Step 1: Extract text from document
     console.log(`Extracting text from ${filename}...`);
     const extractedText = await extractTextFromFile(buffer, filename);
-    
+
     if (!extractedText || extractedText.trim().length === 0) {
-      throw new Error('No text content could be extracted from the document');
+      throw new Error("No text content could be extracted from the document");
     }
 
     // Step 2: Split into chunks
-    console.log('Splitting document into chunks...');
+    console.log("Splitting document into chunks...");
     const textChunks = chunkDocument(extractedText);
-    
+
     // Step 3: Generate embeddings for chunks
     console.log(`Generating embeddings for ${textChunks.length} chunks...`);
     const embeddings = await generateEmbeddings(textChunks);
-    
+
     // Step 4: Create document chunks with embeddings
     const chunks: DocumentChunk[] = textChunks.map((content, index) => ({
       id: crypto.randomUUID(),
       content,
       embedding: embeddings[index],
       documentId,
-      chunkIndex: index
+      chunkIndex: index,
     }));
 
     // Step 5: Generate query embedding for test case generation
@@ -388,16 +432,28 @@ export async function processDocumentForTestGeneration(
     const queryEmbedding = queryEmbeddings[0];
 
     // Step 6: Find relevant chunks using RAG
-    const relevantChunks = findRelevantChunks(queryText, queryEmbedding, chunks);
-    
+    const relevantChunks = findRelevantChunks(
+      queryText,
+      queryEmbedding,
+      chunks,
+    );
+
     // Step 7: Generate test cases using AI
-    console.log(`Generating test cases with ${config.provider.toUpperCase()}...`);
-    const testCases = await generateTestCases(filename, documentType, relevantChunks, requirements, config);
+    console.log(
+      `Generating test cases with ${config.provider.toUpperCase()}...`,
+    );
+    const testCases = await generateTestCases(
+      filename,
+      documentType,
+      relevantChunks,
+      requirements,
+      config,
+    );
 
     return {
       extractedText,
       chunks,
-      testCases
+      testCases,
     };
   } catch (error) {
     console.error(`Error processing document ${filename}:`, error);
