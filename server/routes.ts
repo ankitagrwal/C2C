@@ -1,6 +1,7 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import bcrypt from "bcryptjs";
+import path from "path";
 import { storage } from "./storage";
 import { 
   insertCustomerSchema, 
@@ -324,6 +325,25 @@ const batchUpload = multer({
       cb(null, true);
     } catch (error) {
       cb(new Error('File validation failed'));
+    }
+  }
+});
+
+// Configure dedicated multer instance for CSV uploads
+const csvUpload = multer({ 
+  storage: multer.memoryStorage(),
+  limits: { 
+    fileSize: 5 * 1024 * 1024, // 5MB limit for CSV files
+    files: 1 // Only one CSV file at a time
+  },
+  fileFilter: (req: Request, file: Express.Multer.File, cb: FileFilterCallback) => {
+    // Accept CSV files with various MIME types that browsers might send
+    const fileExt = path.extname(file.originalname).toLowerCase();
+    
+    if (fileExt === '.csv') {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type. Only CSV files (.csv) are allowed.'));
     }
   }
 });
@@ -1516,7 +1536,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Step 3: Upload CSV file with manual test cases
   app.post('/api/test-cases/upload-csv', requireAuth, requireCSRFToken,
-    upload.single('file'),
+    csvUpload.single('file'),
     async (req: AuthenticatedRequest, res) => {
       try {
         if (!req.file) {
