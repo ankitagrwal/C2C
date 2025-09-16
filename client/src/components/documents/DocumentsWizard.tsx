@@ -22,6 +22,8 @@ export interface WizardState {
   manualTestCases: TestCase[];
   allTestCases: TestCase[];
   selectedTestCases: string[];
+  aiGeneratedCount: number;  // Count from step 2 (AI processing)
+  manualCount: number;       // Count from step 3 (manual CSV upload)
   customer: {
     id?: string;
     name?: string;
@@ -73,6 +75,8 @@ export default function DocumentsWizard({ onComplete, onCancel }: DocumentsWizar
     processingJobs: [],
     manualTestCases: [],
     allTestCases: [],
+    aiGeneratedCount: 0,
+    manualCount: 0,
     selectedTestCases: [],
     customer: {}
   });
@@ -162,6 +166,7 @@ export default function DocumentsWizard({ onComplete, onCancel }: DocumentsWizar
               handleStepComplete({
                 processingJobs: jobs,
                 allTestCases: [...wizardState.manualTestCases, ...testCases],
+                aiGeneratedCount: testCases.length,  // Track AI generated count
                 currentStep: 'manual'
               });
             }}
@@ -183,6 +188,7 @@ export default function DocumentsWizard({ onComplete, onCancel }: DocumentsWizar
               handleStepComplete({
                 manualTestCases: updatedManualTestCases,
                 allTestCases: [...processingTestCases, ...updatedManualTestCases],
+                manualCount: updatedManualTestCases.length,  // Track manual count
                 currentStep: 'review'
               });
             }}
@@ -202,6 +208,8 @@ export default function DocumentsWizard({ onComplete, onCancel }: DocumentsWizar
             initialCustomer={wizardState.customer}
             documentIds={wizardState.uploadedDocuments.map(doc => doc.id)}
             industry={wizardState.customer.industry || 'General'}
+            aiGeneratedCount={wizardState.aiGeneratedCount}
+            manualCount={wizardState.manualCount}
           />
         );
 
