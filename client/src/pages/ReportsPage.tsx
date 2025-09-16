@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Download, FileText, BarChart3, PieChart, TrendingUp, Users } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart as RechartsPieChart, Pie, Cell, LineChart, Line, AreaChart, Area } from 'recharts';
-import { toast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 
@@ -49,6 +49,7 @@ const CHART_COLORS = [COLORS.primary, COLORS.secondary, COLORS.accent, COLORS.de
 export default function ReportsPage() {
   const [, setLocation] = useLocation();
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
+  const { toast } = useToast();
 
   // Get URL parameters
   const urlParams = new URLSearchParams(window.location.search);
@@ -165,7 +166,7 @@ export default function ReportsPage() {
         backgroundColor: '#ffffff'
       });
 
-      // Create PDF
+      // Create PDF with proper margins
       const pdf = new jsPDF({
         orientation: 'portrait',
         unit: 'mm',
@@ -173,22 +174,22 @@ export default function ReportsPage() {
       });
 
       const imgData = canvas.toDataURL('image/png');
-      const imgWidth = 210; // A4 width in mm
-      const pageHeight = 295; // A4 height in mm
+      const imgWidth = 200; // A4 width minus margins (210-10)
+      const pageHeight = 285; // A4 height minus margins (297-12)
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
       let heightLeft = imgHeight;
 
-      let position = 0;
+      let position = 5; // Top margin
 
       // Add first page
-      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+      pdf.addImage(imgData, 'PNG', 5, position, imgWidth, imgHeight);
       heightLeft -= pageHeight;
 
-      // Add additional pages if needed
-      while (heightLeft >= 0) {
-        position = heightLeft - imgHeight;
+      // Add additional pages if needed (fix off-by-one error)
+      while (heightLeft > 0) {
+        position = heightLeft - imgHeight + 5; // Account for top margin
         pdf.addPage();
-        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+        pdf.addImage(imgData, 'PNG', 5, position, imgWidth, imgHeight);
         heightLeft -= pageHeight;
       }
 
