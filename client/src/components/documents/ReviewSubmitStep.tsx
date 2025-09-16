@@ -309,6 +309,19 @@ export default function ReviewSubmitStep({
         throw new Error('No document ID available for submission');
       }
 
+      // Determine if we're using an existing customer or creating a new one
+      const customerPayload = existingCustomer && solutionIdStatus === 'exists' 
+        ? {
+            // Use existing customer - only send ID
+            id: existingCustomer.id
+          }
+        : {
+            // Create new customer - send all required fields but no ID
+            name: data.name,
+            industry: data.industry,
+            solutionId: data.solutionId
+          };
+
       const response = await fetch('/api/test-cases/submit', {
         method: 'POST',
         headers: {
@@ -318,19 +331,23 @@ export default function ReviewSubmitStep({
         credentials: 'include',
         body: JSON.stringify({
           documentId: documentIds[0], // Use first document ID
-          customer: {
-            id: existingCustomer?.id, // Optional - if existing customer
-            name: data.name,
-            industry: data.industry,
-            solutionId: data.solutionId
-          },
+          customer: customerPayload,
           selectedTestCaseIds
         })
       });
 
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(errorText || response.statusText);
+        let errorMessage = errorText || response.statusText;
+        
+        try {
+          const errorData = JSON.parse(errorText);
+          errorMessage = errorData.error || errorMessage;
+        } catch {
+          // If not valid JSON, use text as is
+        }
+        
+        throw new Error(errorMessage);
       }
 
       return response.json();
@@ -352,6 +369,34 @@ export default function ReviewSubmitStep({
   });
 
   const onSubmit = (data: CustomerFormData) => {
+    // Validate solution ID status before submission
+    if (solutionIdStatus === 'checking') {
+      toast({
+        title: 'Please Wait',
+        description: 'Still checking solution ID availability. Please wait a moment.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
+    if (solutionIdStatus === 'error') {
+      toast({
+        title: 'Solution ID Error',
+        description: 'Please fix the solution ID error before submitting.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
+    if (solutionIdStatus === 'idle' && data.solutionId.trim().length > 0) {
+      toast({
+        title: 'Solution ID Not Verified',
+        description: 'Please wait for solution ID verification to complete.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
     submitMutation.mutate(data);
   };
 
