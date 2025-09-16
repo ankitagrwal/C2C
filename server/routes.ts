@@ -1113,6 +1113,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       let aiResult;
       try {
+        // Check if document has file data stored
+        if (!document.fileData) {
+          throw new Error(`Document ${document.filename} was uploaded before file storage was implemented. Please re-upload this document to enable AI processing.`);
+        }
+
         // Use the AI service to process the document and generate test cases
         aiResult = await processDocumentForTestGeneration(
           Buffer.from(document.fileData, 'base64'), // Convert base64 back to Buffer
@@ -1394,6 +1399,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       console.log(`Starting background AI processing for job ${jobId}...`);
       
+      // Check if document has file data stored
+      if (!document.fileData) {
+        throw new Error(`Document ${document.filename} was uploaded before file storage was implemented. Please re-upload this document to enable AI processing.`);
+      }
+
       // Call the AI service to process the document
       const aiResult = await processDocumentForTestGeneration(
         Buffer.from(document.fileData, 'base64'), // Convert base64 back to Buffer
