@@ -1413,7 +1413,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         `Generate between ${config.targetMin}-${config.targetMax} test cases for ${config.industry || 'general'} industry`,
         { 
           provider: (config.aiProvider as any) || 'openai', 
-          model: config.aiModel || (config.aiProvider === 'gemini' ? 'gemini-1.5-pro' : 'gpt-4-turbo-preview')
+          model: config.aiModel || (config.aiProvider === 'gemini' ? 'gemini-2.0-flash' : 'gpt-4-turbo-preview')
         }
       );
 

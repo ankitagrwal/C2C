@@ -1,0 +1,104 @@
+2025-09-16 14:04:50.78
+9b15c935
+User
+Error processing document MRG Employee Handbook - Rudy's Florida 9.23.docx: Error: Failed to generate embeddings: 401 Incorrect API key provided: sk-proj-********************************************************************************************************************************************************wbMA. You can find your API key at https://platform.openai.com/account/api-keys.
+2025-09-16 14:04:50.78
+9b15c935
+User
+at generateEmbeddings (file:///home/runner/workspace/dist/index.js:388:11)
+2025-09-16 14:04:50.78
+9b15c935
+User
+at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+2025-09-16 14:04:50.78
+9b15c935
+User
+at async processDocumentForTestGeneration (file:///home/runner/workspace/dist/index.js:560:24)
+2025-09-16 14:04:50.78
+9b15c935
+User
+at async processDocumentInBackground (file:///home/runner/workspace/dist/index.js:1946:24)
+2025-09-16 14:04:50.78
+9b15c935
+User
+Background processing failed for job a2ddb33e-9228-4279-848a-b964aaa0e7d8: Error: Failed to generate embeddings: 401 Incorrect API key provided: sk-proj-********************************************************************************************************************************************************wbMA. You can find your API key at https://platform.openai.com/account/api-keys.
+2025-09-16 14:04:50.78
+9b15c935
+User
+at generateEmbeddings (file:///home/runner/workspace/dist/index.js:388:11)
+2025-09-16 14:04:50.78
+9b15c935
+User
+at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+2025-09-16 14:04:50.78
+9b15c935
+User
+at async processDocumentForTestGeneration (file:///home/runner/workspace/dist/index.js:560:24)
+2025-09-16 14:04:50.78
+9b15c935
+User
+at async processDocumentInBackground (file:///home/runner/workspace/dist/index.js:1946:24)
+2025-09-16 14:04:53.26
+9b15c935
+User
+8:34:53 AM [express] GET /api/jobs/a2ddb33e-9228-4279-848a-b964aaa0e7d8 200 in 93ms :: {"id":"a2ddb3…
+2025-09-16 14:04:55.75
+9b15c935
+User
+8:34:55 AM [express] GET /api/jobs/a2ddb33e-9228-4279-848a-b964aaa0e7d8 304 in 90ms :: {"id":"a2ddb3…
+2025-09-16 14:04:58.23
+9b15c935
+User
+8:34:58 AM [express] GET /api/jobs/a2ddb33e-9228-4279-848a-b964aaa0e7d8 304 in 98ms :: {"id":"a2ddb3…
+2025-09-16 14:05:00.68
+9b15c935
+User
+8:35:00 AM [express] GET /api/jobs/a2ddb33e-9228-4279-848a-b964aaa0e7d8 304 in 92ms :: {"id":"a2ddb3…
+2025-09-16 14:05:03.30
+9b15c935
+User
+8:35:03 AM [express] GET /api/jobs/a2ddb33e-9228-4279-848a-b964aaa0e7d8 304 in 92ms :: {"id":"a2ddb3…
+2025-09-16 14:05:06.29
+9b15c935
+User
+8:35:06 AM [express] GET /api/jobs/a2ddb33e-9228-4279-848a-b964aaa0e7d8 304 in 92ms :: {"id":"a2ddb3…
+2025-09-16 14:05:08.88
+9b15c935
+User
+8:35:08 AM [express] GET /api/jobs/a2ddb33e-9228-4279-848a-b964aaa0e7d8 304 in 95ms :: {"id":"a2ddb3…
+2025-09-16 14:05:11.44
+9b15c935
+User
+8:35:11 AM [express] GET /api/jobs/a2ddb33e-9228-4279-848a-b964aaa0e7d8 304 in 92ms :: {"id":"a2ddb3…
+2025-09-16 14:05:14.03
+9b15c935
+User
+8:35:14 AM [express] GET /api/jobs/a2ddb33e-9228-4279-848a-b964aaa0e7d8 304 in 141ms :: {"id":"a2ddb…
+2025-09-16 14:05:16.55
+9b15c935
+User
+8:35:16 AM [express] GET /api/jobs/a2ddb33e-9228-4279-848a-b964aaa0e7d8 304 in 91ms :: {"id":"a2ddb3…
+2025-09-16 14:05:19.11
+9b15c935
+User
+8:35:19 AM [express] GET /api/jobs/a2ddb33e-9228-4279-848a-b964aaa0e7d8 304 in 93ms :: {"id":"a2ddb3…
+2025-09-16 14:05:21.56
+9b15c935
+User
+8:35:21 AM [express] GET /api/jobs/a2ddb33e-9228-4279-848a-b964aaa0e7d8 304 in 92ms :: {"id":"a2ddb3…
+2025-09-16 14:05:24.41
+9b15c935
+User
+8:35:24 AM [express] GET /api/jobs/a2ddb33e-9228-4279-848a-b964aaa0e7d8 304 in 92ms :: {"id":"a2ddb3…
+2025-09-16 14:05:27.40
+9b15c935
+User
+8:35:27 AM [express] GET /api/jobs/a2ddb33e-9228-4279-848a-b964aaa0e7d8 304 in 92ms :: {"id":"a2ddb3…
+2025-09-16 14:05:29.86
+9b15c935
+User
+8:35:29 AM [express] GET /api/jobs/a2ddb33e-9228-4279-848a-b964aaa0e7d8 304 in 94ms :: {"id":"a2ddb3…
+2025-09-16 14:05:32.32
+9b15c935
+User
+8:35:32 AM [express] GET /api/jobs/a2ddb33e-9228-4279-848a-b964aaa0e7d8 304 in 93ms :: {"id":"a2ddb3…

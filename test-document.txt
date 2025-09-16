@@ -1,0 +1,39 @@
+Employee Handbook - Technology Solutions Inc.
+
+SECTION 1: COMPANY OVERVIEW
+Technology Solutions Inc. is a leading software development company specializing in enterprise applications and cloud solutions.
+
+SECTION 2: CODE OF CONDUCT
+All employees must adhere to professional standards including:
+- Maintaining confidentiality of client information
+- Following security protocols for system access
+- Reporting any security incidents immediately
+- Using company resources responsibly
+
+SECTION 3: WORK POLICIES
+Work Hours: Standard business hours are 9:00 AM to 5:00 PM, Monday through Friday.
+Remote Work: Employees may work remotely up to 2 days per week with manager approval.
+Time Off: Employees accrue 15 days of paid time off annually.
+
+SECTION 4: TECHNOLOGY POLICIES
+All employees must:
+- Use strong passwords (minimum 12 characters)
+- Enable two-factor authentication on all business accounts
+- Install security updates within 48 hours of release
+- Back up critical work files to company cloud storage
+
+SECTION 5: COMPLIANCE REQUIREMENTS
+This company complies with:
+- SOX (Sarbanes-Oxley Act) financial reporting requirements
+- GDPR (General Data Protection Regulation) for EU data handling
+- SOC 2 Type II security standards
+- Industry-specific data retention policies
+
+SECTION 6: EMERGENCY PROCEDURES
+In case of security incidents:
+1. Immediately disconnect affected systems
+2. Contact IT Security team at security@techsolutions.com
+3. Document the incident details
+4. Do not attempt to resolve security issues independently
+
+This handbook is effective as of January 1, 2024.

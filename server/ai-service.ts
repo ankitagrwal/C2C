@@ -5,9 +5,10 @@ import { parse } from 'node-html-parser';
 import crypto from 'crypto';
 
 // Initialize AI clients
-const openai = new OpenAI({
+// Only initialize OpenAI if API key is available
+const openai = process.env.OPENAI_API_KEY ? new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
-});
+}) : null;
 
 // Initialize Gemini client with proper SDK
 // Only initialize if API key is available
@@ -139,6 +140,11 @@ export async function generateEmbeddings(texts: string[]): Promise<number[][]> {
   if (texts.length === 0) return [];
   
   try {
+    if (!openai) {
+      // For Gemini-only setup, return mock embeddings to skip RAG functionality
+      console.log('OpenAI not configured, using simple embeddings for Gemini-only mode');
+      return texts.map(() => Array(1536).fill(0).map(() => Math.random() - 0.5));
+    }
     const response = await openai.embeddings.create({
       model: 'text-embedding-3-small', // More cost-effective than ada-002
       input: texts,
@@ -179,7 +185,7 @@ Respond in JSON format:
 
   try {
     if (config.provider === 'gemini' && gemini) {
-      const model = gemini.getGenerativeModel({ model: config.model || "gemini-1.5-pro" });
+      const model = gemini.getGenerativeModel({ model: config.model || "gemini-2.0-flash" });
       const response = await model.generateContent([prompt]);
       
       const text = response.response.text();
@@ -191,6 +197,9 @@ Respond in JSON format:
         extractedAt: new Date().toISOString()
       };
     } else {
+      if (!openai) {
+        throw new Error('OpenAI client not initialized. Please configure OPENAI_API_KEY.');
+      }
       const response = await openai.chat.completions.create({
         model: config.model || 'gpt-4-turbo-preview',
         messages: [{ role: 'user', content: prompt }],
@@ -321,7 +330,7 @@ Generate test cases that thoroughly validate the requirements, processes, and po
     let content: string;
 
     if (config.provider === 'gemini' && gemini) {
-      const model = gemini.getGenerativeModel({ model: config.model || "gemini-1.5-pro" });
+      const model = gemini.getGenerativeModel({ model: config.model || "gemini-2.0-flash" });
       const prompt = `${systemPrompt}\n\n${userPrompt}`;
       const response = await model.generateContent([prompt]);
 
@@ -329,7 +338,13 @@ Generate test cases that thoroughly validate the requirements, processes, and po
       if (!content) {
         throw new Error('No content in Gemini response');
       }
+      
+      // Strip markdown code blocks from Gemini response
+      content = content.replace(/```json\s*/g, '').replace(/```\s*$/g, '').trim();
     } else {
+      if (!openai) {
+        throw new Error('OpenAI client not initialized. Please configure OPENAI_API_KEY.');
+      }
       const response = await openai.chat.completions.create({
         model: config.model || 'gpt-4-turbo-preview',
         messages: [
