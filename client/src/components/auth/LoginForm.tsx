@@ -61,8 +61,6 @@ export default function LoginForm({ onLogin, isLoading = false, error }: LoginFo
           <CardTitle className="text-2xl font-semibold">Clause2Case</CardTitle>
           <CardDescription>
             Transform business documents into comprehensive test cases
-            <br />
-            <span className="text-xs text-muted-foreground">Admin Access Required</span>
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -115,12 +113,6 @@ export default function LoginForm({ onLogin, isLoading = false, error }: LoginFo
               {isLoading ? "Signing In..." : "Sign In"}
             </Button>
           </form>
-          
-          <div className="mt-6 pt-4 border-t text-center">
-            <p className="text-xs text-muted-foreground">
-              Demo credentials: admin / admin123!
-            </p>
-          </div>
         </CardContent>
       </Card>
     </div>
