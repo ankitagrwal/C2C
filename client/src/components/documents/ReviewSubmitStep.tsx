@@ -17,6 +17,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useToast } from '@/hooks/use-toast';
 import { useMutation } from '@tanstack/react-query';
+import { useLocation } from 'wouter';
 import type { TestCase, Customer } from '@shared/schema';
 
 // Customer form validation schema
@@ -89,6 +90,7 @@ export default function ReviewSubmitStep({
   const [solutionIdStatus, setSolutionIdStatus] = useState<'idle' | 'checking' | 'exists' | 'available' | 'error'>('idle');
   const [existingCustomer, setExistingCustomer] = useState<Customer | null>(null);
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
 
   // Initialize form with customer data
   const form = useForm<CustomerFormData>({
@@ -450,7 +452,14 @@ export default function ReviewSubmitStep({
         title: 'Submission Successful',
         description: `Test case workflow submitted successfully. Customer ID: ${data.customerId}`,
       });
-      onComplete();
+      
+      // Navigate to reports page with submission data
+      const reportParams = new URLSearchParams({
+        customerId: data.customerId,
+        documentId: data.documentId,
+        testCasesCount: data.testCasesCount.toString()
+      });
+      setLocation(`/reports?${reportParams.toString()}`);
     },
     onError: (error: any) => {
       toast({
