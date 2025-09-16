@@ -516,7 +516,7 @@ export default function ReviewSubmitStep({
   })).filter(stat => stat.count > 0);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-testid="review-submit-step">
       {/* Summary Stats */}
       <Card>
         <CardHeader>
@@ -757,10 +757,11 @@ export default function ReviewSubmitStep({
           </div>
         </CardHeader>
         <CardContent>
-          <Table>
+          <div className="w-full overflow-x-auto">
+          <Table data-testid="review-submit-table" className="w-full min-w-[1200px]">
             <TableHeader>
               <TableRow>
-                <TableHead className="w-12">
+                <TableHead className="w-12 text-center">
                   <Checkbox
                     checked={isAllSelected}
                     onCheckedChange={toggleSelectAll}
@@ -768,71 +769,82 @@ export default function ReviewSubmitStep({
                     className={isSomeSelected && !isAllSelected ? "data-[state=checked]:bg-primary/50" : ""}
                   />
                 </TableHead>
-                <TableHead>Title</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead>Priority</TableHead>
-                <TableHead>Source</TableHead>
-                <TableHead>Description</TableHead>
-                <TableHead>Test Steps</TableHead>
+                <TableHead className="min-w-[200px] max-w-[250px]">Title</TableHead>
+                <TableHead className="w-[120px] text-center">Category</TableHead>
+                <TableHead className="w-[100px] text-center">Priority</TableHead>
+                <TableHead className="w-[100px] text-center">Source</TableHead>
+                <TableHead className="min-w-[200px] max-w-[300px]">Description</TableHead>
+                <TableHead className="min-w-[200px] max-w-[300px]">Test Steps</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {paginatedTestCases.map((testCase) => (
+              {paginatedTestCases.length === 0 ? (
+                <TableRow data-testid="table-row-empty">
+                  <TableCell colSpan={7} className="h-32 text-center">
+                    <div className="flex flex-col items-center justify-center space-y-2 text-muted-foreground">
+                      <FileText className="h-8 w-8" />
+                      <p className="text-sm font-medium">No test cases available</p>
+                      <p className="text-xs">Upload documents and generate AI test cases or add manual test cases to get started.</p>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ) : (
+                paginatedTestCases.map((testCase) => (
                 <TableRow key={testCase.id} data-testid={`table-row-${testCase.id}`}>
-                  <TableCell>
+                  <TableCell className="text-center">
                     <Checkbox
                       checked={selectedTestCases.has(testCase.id)}
                       onCheckedChange={() => toggleTestCase(testCase.id)}
                       data-testid={`checkbox-${testCase.id}`}
                     />
                   </TableCell>
-                  <TableCell className="font-medium max-w-xs">
-                    <div className="truncate" title={testCase.title}>
+                  <TableCell className="font-medium min-w-[200px] max-w-[250px]">
+                    <div className="break-words hyphens-auto" title={testCase.title}>
                       {testCase.title}
                     </div>
                   </TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className="text-xs">
+                  <TableCell className="text-center">
+                    <Badge variant="outline" className="text-xs whitespace-nowrap">
                       {testCase.category || 'Manual'}
                     </Badge>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="text-center">
                     <Badge
                       variant={
                         testCase.priority === 'high' ? 'destructive' :
                         testCase.priority === 'medium' ? 'secondary' :
                         'outline'
                       }
-                      className="text-xs"
+                      className="text-xs whitespace-nowrap"
                     >
                       {(testCase.priority || 'medium').charAt(0).toUpperCase() + (testCase.priority || 'medium').slice(1)}
                     </Badge>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="text-center">
                     <Badge 
                       variant={testCase.source === 'generated' ? 'default' : 'secondary'}
-                      className="text-xs"
+                      className="text-xs whitespace-nowrap"
                     >
                       {testCase.source === 'generated' ? 'AI' : 
                        testCase.source === 'manual' ? 'Manual' : 'Uploaded'}
                     </Badge>
                   </TableCell>
-                  <TableCell className="max-w-md" data-testid={`text-description-${testCase.id}`}>
-                    <div className="truncate text-sm text-muted-foreground" title={testCase.parsedDescription}>
+                  <TableCell className="min-w-[200px] max-w-[300px] align-top" data-testid={`text-description-${testCase.id}`}>
+                    <div className="text-sm text-muted-foreground break-words hyphens-auto leading-relaxed" title={testCase.parsedDescription}>
                       {testCase.parsedDescription}
                     </div>
                   </TableCell>
-                  <TableCell className="max-w-md" data-testid={`text-steps-${testCase.id}`}>
-                    <div className="text-sm text-muted-foreground whitespace-pre-line">
-                      <div className="max-h-24">
-                        {testCase.parsedSteps}
-                      </div>
+                  <TableCell className="min-w-[200px] max-w-[300px] align-top" data-testid={`text-steps-${testCase.id}`}>
+                    <div className="text-sm text-muted-foreground break-words hyphens-auto leading-relaxed whitespace-pre-line" title={testCase.parsedSteps}>
+                      {testCase.parsedSteps}
                     </div>
                   </TableCell>
                 </TableRow>
-              ))}
+                ))
+              )}
             </TableBody>
           </Table>
+          </div>
 
           {/* Pagination */}
           {totalPages > 1 && (

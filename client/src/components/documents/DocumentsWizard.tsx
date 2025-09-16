@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Check, FileText, Bot, FileSpreadsheet, CheckCircle } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
+import { useQuery } from '@tanstack/react-query';
 import type { Document, ProcessingJob, TestCase } from '@shared/schema';
 
 // Import step components
@@ -86,6 +87,39 @@ export default function DocumentsWizard({ onComplete, onCancel }: DocumentsWizar
   const currentStepIndex = WIZARD_STEPS.findIndex(step => step.id === wizardState.currentStep);
   const progressPercentage = (currentStepIndex / WIZARD_STEPS.length) * 100;
 
+  // Load existing test cases scoped to current documents when component mounts
+  useEffect(() => {
+    if (wizardState.uploadedDocuments.length > 0) {
+      const loadScopedTestCases = async () => {
+        try {
+          // Only load test cases for uploaded documents to prevent cross-tenant data exposure
+          const documentIds = wizardState.uploadedDocuments.map(doc => doc.id);
+          const promises = documentIds.map(docId => 
+            fetch(`/api/test-cases?documentId=${docId}`).then(res => res.json())
+          );
+          
+          const results = await Promise.all(promises);
+          const existingTestCases = results.flat();
+          
+          if (existingTestCases.length > 0) {
+            console.log('Found existing test cases for documents:', existingTestCases.length);
+            // Update wizard state with scoped existing test cases
+            setWizardState(prev => ({
+              ...prev,
+              allTestCases: existingTestCases,
+              aiGeneratedCount: existingTestCases.filter((tc: any) => tc.source === 'generated').length,
+              manualCount: existingTestCases.filter((tc: any) => tc.source === 'manual').length,
+            }));
+          }
+        } catch (error) {
+          console.error('Failed to load scoped test cases:', error);
+        }
+      };
+
+      loadScopedTestCases();
+    }
+  }, [wizardState.uploadedDocuments]);
+
   const handleStepComplete = (stepData: Partial<WizardState>) => {
     setWizardState(prev => ({ ...prev, ...stepData }));
   };
@@ -146,6 +180,7 @@ export default function DocumentsWizard({ onComplete, onCancel }: DocumentsWizar
   };
 
   const renderStepContent = () => {
+    console.log('Rendering step content for:', wizardState.currentStep, 'All test cases:', wizardState.allTestCases.length);
     switch (wizardState.currentStep) {
       case 'upload':
         return (
@@ -209,24 +244,18 @@ export default function DocumentsWizard({ onComplete, onCancel }: DocumentsWizar
               });
             }}
             onSkip={() => {
-              // Skip manual upload - check if we have any test cases before proceeding to review
-              const manualIds = new Set(wizardState.manualTestCases.map(tc => tc.id));
-              const processingTestCases = wizardState.allTestCases.filter(tc => 
-                tc.source !== 'manual' && !manualIds.has(tc.id)
-              );
-              const newAllTestCases = [...processingTestCases, ...wizardState.manualTestCases];
-              
-              // Only proceed to review if we have test cases
-              if (newAllTestCases.length > 0) {
+              // Skip manual upload - only proceed to review if we have test cases
+              if (wizardState.allTestCases.length > 0) {
                 handleStepComplete({
-                  allTestCases: newAllTestCases,
+                  manualTestCases: [],
+                  allTestCases: wizardState.allTestCases,
+                  manualCount: 0,
                   currentStep: 'review'
                 });
               } else {
-                // Show message and stay on manual step
                 toast({
                   title: 'No Test Cases Available',
-                  description: 'Please either generate AI test cases or upload manual test cases before proceeding to review.',
+                  description: 'Please generate AI test cases or upload manual test cases before proceeding to review.',
                   variant: 'destructive',
                 });
               }
