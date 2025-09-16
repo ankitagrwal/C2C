@@ -1857,10 +1857,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get report data for a submission
   app.get('/api/reports/submission', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
+      // More flexible validation that allows mock/demo data
       const validatedQuery = z.object({
-        submissionId: z.string().uuid().optional(),
-        customerId: z.string().uuid().optional(),
-        documentId: z.string().uuid().optional()
+        submissionId: z.string().optional(),
+        customerId: z.string().optional(),
+        documentId: z.string().optional()
       }).parse(req.query);
 
       const { submissionId, customerId, documentId } = validatedQuery;
@@ -1870,6 +1871,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
           error: 'At least one of submissionId, customerId, or documentId is required',
           code: 'MISSING_PARAMETERS'
         });
+      }
+
+      // Handle mock data for demo purposes
+      if ((customerId && customerId.startsWith('mock-')) || 
+          (documentId && documentId.startsWith('mock-')) || 
+          (submissionId && submissionId.startsWith('mock-'))) {
+        // Return mock report data for demo
+        const mockReportData = {
+          customerId: customerId || 'mock-customer-id',
+          customerName: 'Acme Corporation',
+          industry: 'Finance',
+          documentName: 'Payment Processing Policy.pdf',
+          submissionDate: new Date().toISOString(),
+          testCases: {
+            total: 45,
+            selected: 42,
+            categories: {
+              'Functional': 18,
+              'Compliance': 12,
+              'Edge Cases': 8,
+              'Integration': 4,
+              'Performance': 3
+            },
+            priorities: {
+              'High': 15,
+              'Medium': 22,
+              'Low': 8
+            },
+            sources: {
+              'AI Generated': 32,
+              'Manual': 10,
+              'Uploaded': 3
+            },
+            averageConfidence: 0.89
+          },
+          processingMetrics: {
+            totalProcessingTime: 28.5,
+            aiGeneratedCount: 32,
+            manualCount: 10,
+            uploadedCount: 3
+          }
+        };
+        return res.json(mockReportData);
       }
 
       const reportData = await storage.getReportData(submissionId, customerId, documentId);
