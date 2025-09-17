@@ -69,6 +69,7 @@ export const processingJobs = pgTable("processing_jobs", {
 export const testCases = pgTable("test_cases", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   documentId: varchar("document_id").references(() => documents.id),
+  customerId: varchar("customer_id").references(() => customers.id), // Direct customer reference for filtering
   title: text("title").notNull(), // Test case title for wizard
   content: text("content").notNull(),
   steps: jsonb("steps"), // Test execution steps as JSON array
