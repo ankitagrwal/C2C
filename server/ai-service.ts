@@ -287,13 +287,15 @@ export async function generateTestCases(
 
   const systemPrompt = `You are an expert QA engineer specializing in enterprise test case generation. Your task is to analyze business documents and generate comprehensive, actionable test cases.
 
+CRITICAL: You MUST respond with ONLY valid JSON. Do not include any explanatory text, conversational responses, or markdown formatting. Your entire response must be parseable JSON.
+
 DOCUMENT ANALYSIS CONTEXT:
 - Document: ${documentTitle}
 - Type: ${documentType}
 - Additional Requirements: ${requirements || "Standard test coverage"}
 
 RESPONSE FORMAT:
-Generate test cases in this exact JSON format:
+Respond with ONLY this exact JSON format (no additional text):
 {
   "testCases": [
     {
@@ -348,13 +350,38 @@ Generate test cases that thoroughly validate the requirements, processes, and po
       throw new Error("No content in Gemini response");
     }
 
-    // Strip markdown code blocks from Gemini response
+    // Strip markdown code blocks and clean response
     content = content
       .replace(/```json\s*/g, "")
       .replace(/```\s*$/g, "")
       .trim();
 
-    result = JSON.parse(content);
+    // Try to extract JSON if there's extra text
+    const jsonMatch = content.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      content = jsonMatch[0];
+    }
+
+    // Parse JSON with better error handling
+    try {
+      result = JSON.parse(content);
+    } catch (parseError) {
+      console.error("JSON Parse Error. Raw content:", content.substring(0, 200) + "...");
+      console.error("Parse error:", parseError);
+      
+      // Try to fix common issues
+      let fixedContent = content
+        .replace(/[\u0000-\u001F\u007F-\u009F]/g, "") // Remove control characters
+        .replace(/,(\s*[}\]])/g, "$1") // Remove trailing commas
+        .trim();
+      
+      try {
+        result = JSON.parse(fixedContent);
+        console.log("Successfully parsed after cleanup");
+      } catch (secondError) {
+        throw new Error(`Failed to parse AI response as JSON. Content starts with: "${content.substring(0, 100)}..."`);
+      }
+    }
     const processingTime = Date.now() - startTime;
 
     // Extract metadata from document content

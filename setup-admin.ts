@@ -10,7 +10,7 @@ async function createAdminUser() {
     console.log('Database URL configured:', !!process.env.DATABASE_URL);
     
     // Hash the password
-    const hashedPassword = await bcrypt.hash('admin123!', 10);
+    const hashedPassword = await bcrypt.hash('password', 10);
     
     // Create admin user with explicit conflict handling
     const [user] = await db
@@ -32,7 +32,7 @@ async function createAdminUser() {
     if (user) {
       console.log('✅ Admin user created/updated successfully');
       console.log('Username: admin');
-      console.log('Password: admin123!');
+      console.log('Password: password');
       console.log('User ID:', user.id);
     } else {
       console.log('⚠️ Failed to create/update admin user');

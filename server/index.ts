@@ -87,7 +87,7 @@ async function ensureAdminUser() {
     
     if (existingAdmin.length === 0) {
       // Create admin user
-      const hashedPassword = await bcrypt.hash('admin123!', 10);
+      const hashedPassword = await bcrypt.hash('password', 10);
       
       await db.insert(users).values({
         username: 'admin',
@@ -97,7 +97,7 @@ async function ensureAdminUser() {
       
       console.log('✅ Admin user created successfully');
       console.log('   Username: admin');
-      console.log('   Password: admin123!');
+      console.log('   Password: password');
     } else {
       console.log('✅ Admin user already exists');
     }
