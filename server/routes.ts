@@ -1191,7 +1191,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const testCaseData = {
             documentId,
             title: aiTestCase.title, // Use AI-generated title
-            content: `${aiTestCase.title}\n\nDescription: ${aiTestCase.description}\n\nSteps:\n${aiTestCase.steps.map((step, idx) => `${idx + 1}. ${step}`).join('\n')}\n\nExpected Result: ${aiTestCase.expectedResult}`,
+            content: aiTestCase.description || 'AI generated test case',
+            steps: aiTestCase.steps || [],
+            expectedResult: aiTestCase.expectedResult || null,
+            tags: aiTestCase.tags || [],
             category: aiTestCase.category === 'functional' ? 'Functional Tests' :
                      aiTestCase.category === 'compliance' ? 'Compliance Tests' :
                      aiTestCase.category === 'integration' ? 'Integration Tests' :
@@ -1462,7 +1465,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         try {
           const newTestCase = await storage.createTestCase({
             title: testCase.title,
-            content: testCase.description || `${testCase.steps?.join('\n') || ''}\n\nExpected: ${testCase.expectedResult || ''}`,
+            content: testCase.description || 'AI generated test case',
+            steps: testCase.steps || [],
+            expectedResult: testCase.expectedResult || null,
+            tags: testCase.tags || [],
             category: testCase.category,
             priority: testCase.priority,
             source: 'ai_generated',

@@ -178,11 +178,13 @@ export async function extractDocumentMetadata(
 2. DOCUMENT TYPE: Identify what kind of document this is (e.g., Employee Handbook, Policy Manual, Contract, etc.)
 3. INDUSTRY: Determine the business sector/industry based on content and context
 
+CRITICAL: You MUST respond with ONLY valid JSON. Do not include any explanatory text, conversational responses, or markdown formatting. Your entire response must be parseable JSON.
+
 Document filename: ${filename}
 Document content:
 ${documentContent.slice(0, 3000)}...
 
-Respond in JSON format:
+Respond with ONLY this exact JSON format (no additional text):
 {
   "customerName": "exact company name found in document or null",
   "documentType": "specific document type or null",
@@ -203,13 +205,40 @@ Respond in JSON format:
     const response = await model.generateContent([prompt]);
 
     let text = response.response.text() || "{}";
-    // Strip markdown code blocks from Gemini response
+    // Strip markdown code blocks and clean response
     text = text
       .replace(/```json\s*/g, "")
       .replace(/```\s*$/g, "")
       .trim();
 
-    const result = JSON.parse(text);
+    // Try to extract JSON if there's extra text
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      text = jsonMatch[0];
+    }
+
+    // Parse JSON with better error handling
+    let result;
+    try {
+      result = JSON.parse(text);
+    } catch (parseError) {
+      console.error("JSON Parse Error in extractDocumentMetadata. Raw content:", text.substring(0, 200) + "...");
+      console.error("Parse error:", parseError);
+      
+      // Try to fix common issues
+      let fixedContent = text
+        .replace(/[\u0000-\u001F\u007F-\u009F]/g, "") // Remove control characters
+        .replace(/,(\s*[}\]])/g, "$1") // Remove trailing commas
+        .trim();
+      
+      try {
+        result = JSON.parse(fixedContent);
+        console.log("Successfully parsed after cleanup in extractDocumentMetadata");
+      } catch (secondError) {
+        console.error("Failed to parse document metadata after cleanup, using defaults");
+        result = {}; // Use empty object as fallback
+      }
+    }
     return {
       customerName: result.customerName || undefined,
       documentType: result.documentType || undefined,

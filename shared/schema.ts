@@ -71,6 +71,9 @@ export const testCases = pgTable("test_cases", {
   documentId: varchar("document_id").references(() => documents.id),
   title: text("title").notNull(), // Test case title for wizard
   content: text("content").notNull(),
+  steps: jsonb("steps"), // Test execution steps as JSON array
+  expectedResult: text("expected_result"), // Expected outcome
+  tags: jsonb("tags"), // Tags as JSON array
   category: text("category"), // 'Functional', 'Compliance', 'Edge Cases', 'Integration'
   priority: text("priority").default("medium"), // 'low', 'medium', 'high' for wizard
   source: text("source").default("generated"), // 'generated', 'uploaded', 'manual'
