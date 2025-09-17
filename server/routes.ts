@@ -13,6 +13,7 @@ import {
 import multer, { type FileFilterCallback, type Multer } from "multer";
 import { z } from "zod";
 import { processDocumentForTestGeneration } from "./ai-service";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { parseDocumentForCompanyDetails } from "./services/documentParser";
 
 // Simple in-memory rate limiter for login attempts
@@ -1936,6 +1937,107 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       return handleDatabaseError(error, res, 'get report data');
+    }
+  });
+
+  // Initialize Gemini client for chatbot
+  const gemini = process.env.GEMINI_API_KEY 
+    ? new GoogleGenerativeAI(process.env.GEMINI_API_KEY) 
+    : null;
+
+  // Chat message schema
+  const chatMessageSchema = z.object({
+    message: z.string().min(1).max(1000),
+    conversationHistory: z.array(z.object({
+      role: z.enum(['user', 'assistant']),
+      content: z.string()
+    })).optional().default([])
+  });
+
+  // Chatbot API endpoint
+  app.post('/api/chat', requireAuth, requireCSRFToken, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { message, conversationHistory } = chatMessageSchema.parse(req.body);
+
+      if (!gemini) {
+        return res.status(500).json({ 
+          error: 'Gemini API not configured', 
+          code: 'GEMINI_NOT_CONFIGURED' 
+        });
+      }
+
+      // Context-aware system instructions for Clause2Case
+      const systemInstruction = `You are the Clause2Case AI Assistant - a helpful, knowledgeable guide for this enterprise test case generation platform.
+
+**Platform Overview:**
+Clause2Case helps enterprise teams convert business documents into comprehensive test cases using AI. The platform features a 4-step wizard workflow and supports both AI-generated and manual test case creation.
+
+**Key Features & Navigation Help:**
+1. **Dashboard** - Shows metrics: 47 documents processed, 1,284 test cases generated, 12 active customers
+2. **Internal Tools** - Three key systems:
+   - PMAP (Project Management Platform) - Compliance tracking and policy management
+   - Navigator (Pro WFM Migration Hub) - System navigation and integration
+   - Validator (Config Testing Engine) - Configuration validation and testing
+3. **Customers** - Manage customer accounts and solution IDs
+4. **Documents** - Upload and manage business documents (PDF, DOC, DOCX, TXT - max 5 files, 20MB each)
+5. **Test Cases** - View, filter, and manage generated test cases
+6. **AI Processing** - Monitor document processing jobs and system status
+
+**4-Step Wizard Workflow:**
+Step 1: Upload Documents → Step 2: AI Processing → Step 3: Manual Addition → Step 4: Review & Submit
+
+**Test Case Categories:**
+- Functional Tests: Core business logic and workflows
+- Compliance Tests: Regulatory and policy adherence  
+- Integration Tests: System interactions and data flow
+- Edge Cases: Boundary conditions and error handling
+
+**Smart Response Guidelines:**
+- For document upload questions: Guide to Documents section, explain supported formats and limits
+- For AI vs manual test generation: Explain both approaches and when to use each
+- For test case management: Direct to Test Cases section with filtering and status tips
+- For system performance: Interpret dashboard metrics and processing job status
+- For Internal Tools: Explain PMAP, Navigator, and Validator functionality
+- For navigation: Provide specific section guidance and workflow steps
+
+Always provide specific, actionable guidance with clear next steps. Be concise but comprehensive.`;
+
+      const model = gemini.getGenerativeModel({
+        model: "gemini-2.0-flash",
+        systemInstruction: systemInstruction
+      });
+
+      // Build conversation context
+      const conversationContext = conversationHistory
+        .map(msg => `${msg.role === 'user' ? 'User' : 'Assistant'}: ${msg.content}`)
+        .join('\n');
+
+      const fullPrompt = conversationContext 
+        ? `${conversationContext}\nUser: ${message}` 
+        : `User: ${message}`;
+
+      const result = await model.generateContent(fullPrompt);
+      const response = result.response.text() || "I'm sorry, I couldn't generate a response right now.";
+
+      res.json({ 
+        response,
+        timestamp: new Date().toISOString()
+      });
+
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          error: 'Invalid message format', 
+          details: error.errors,
+          code: 'VALIDATION_ERROR'
+        });
+      }
+
+      console.error('Chat API error:', error);
+      res.status(500).json({ 
+        error: 'Internal server error',
+        code: 'CHAT_ERROR'
+      });
     }
   });
 

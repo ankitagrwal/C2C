@@ -4,6 +4,7 @@ import { AppSidebar } from "./AppSidebar";
 import { ThemeToggle } from "../theme/ThemeToggle";
 import { Button } from "@/components/ui/button";
 import { LogOut } from "lucide-react";
+import { Chatbot } from "@/components/ui/chatbot";
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -60,6 +61,7 @@ export default function MainLayout({ children, user, onLogout }: MainLayoutProps
           </main>
         </div>
       </div>
+      <Chatbot />
     </SidebarProvider>
   );
 }
