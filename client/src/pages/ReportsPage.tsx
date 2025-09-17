@@ -127,6 +127,19 @@ export default function ReportsPage() {
     }
   };
 
+  // CRITICAL: ALL HOOKS MUST BE CALLED FIRST - React Rules of Hooks
+  // Show error toast but don't block the page - use demo data instead
+  useEffect(() => {
+    if (error) {
+      console.log('Reports page error:', error);
+      toast({
+        title: 'Using Demo Data',
+        description: 'Showing sample report data. Login may be required for live data.',
+        variant: 'default',
+      });
+    }
+  }, [error]); // Removed toast from dependencies to prevent infinite loop
+
   // Always ensure we have data to display 
   const displayData = reportData || mockReportData;
 
@@ -367,17 +380,7 @@ export default function ReportsPage() {
     );
   }
 
-  // Show error toast but don't block the page - use demo data instead
-  useEffect(() => {
-    if (error) {
-      console.log('Reports page error:', error);
-      toast({
-        title: 'Using Demo Data',
-        description: 'Showing sample report data. Login may be required for live data.',
-        variant: 'default',
-      });
-    }
-  }, [error]); // Removed toast from dependencies to prevent infinite loop
+  // useEffect moved to top of component - no longer needed here
 
   return (
     <div className="container mx-auto py-6 space-y-6">
