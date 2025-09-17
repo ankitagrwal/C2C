@@ -121,11 +121,12 @@ export function Chatbot({ className }: ChatbotProps) {
         onClick={toggleChat}
         size="icon"
         className={cn(
-          "fixed bottom-4 right-4 h-14 w-14 rounded-full shadow-lg z-50",
+          "fixed h-14 w-14 rounded-full shadow-lg z-50",
           "bg-primary text-primary-foreground hover-elevate active-elevate-2",
           "border-2 border-primary-border",
           className
         )}
+        style={{ bottom: '16px', right: '16px' }}
         data-testid="button-open-chat"
       >
         <MessageCircle className="h-6 w-6" />
@@ -136,11 +137,12 @@ export function Chatbot({ className }: ChatbotProps) {
   return (
     <Card
       className={cn(
-        "fixed bottom-4 right-4 w-96 shadow-xl z-50 transition-all duration-300",
+        "fixed w-96 shadow-xl z-50 transition-all duration-300",
         isMinimized ? "h-16" : "h-[500px]",
         "bg-card border-card-border",
         className
       )}
+      style={{ bottom: '16px', right: '16px' }}
       data-testid="chatbot-window"
     >
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-4 py-3 border-b border-card-border">
