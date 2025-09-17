@@ -19,6 +19,61 @@ interface ChatbotProps {
   className?: string;
 }
 
+// Function to format message content with markdown-style formatting
+function formatMessageContent(content: string): JSX.Element {
+  // Split content into lines
+  const lines = content.split('\n');
+  const formattedLines: JSX.Element[] = [];
+  let bulletCounter = 1;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+    
+    if (line.startsWith('* ')) {
+      // Handle bullet points - convert to numbered list
+      const bulletContent = line.substring(2); // Remove '* '
+      const formattedContent = formatBoldText(bulletContent);
+      
+      formattedLines.push(
+        <div key={i} className="flex items-start space-x-2 my-1">
+          <span className="text-primary font-semibold min-w-[1.5rem]">{bulletCounter}.</span>
+          <span>{formattedContent}</span>
+        </div>
+      );
+      bulletCounter++;
+    } else if (line) {
+      // Handle regular text with bold formatting
+      const formattedContent = formatBoldText(line);
+      formattedLines.push(<div key={i} className="my-1">{formattedContent}</div>);
+    } else {
+      // Empty line
+      formattedLines.push(<div key={i} className="h-2"></div>);
+    }
+  }
+
+  return <div>{formattedLines}</div>;
+}
+
+// Function to convert **text** to bold
+function formatBoldText(text: string): JSX.Element {
+  const parts = text.split(/(\*\*[^*]+\*\*)/g);
+  
+  return (
+    <>
+      {parts.map((part, index) => {
+        if (part.startsWith('**') && part.endsWith('**')) {
+          // Bold text
+          const boldText = part.slice(2, -2);
+          return <strong key={index} className="font-semibold text-foreground">{boldText}</strong>;
+        } else {
+          // Regular text
+          return <span key={index}>{part}</span>;
+        }
+      })}
+    </>
+  );
+}
+
 export function Chatbot({ className }: ChatbotProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
@@ -224,7 +279,7 @@ export function Chatbot({ className }: ChatbotProps) {
                     )}
                     data-testid={`message-${message.role}-${message.id}`}
                   >
-                    <p className="whitespace-pre-wrap leading-relaxed">{message.content}</p>
+                    <div className="leading-relaxed">{formatMessageContent(message.content)}</div>
                     <span className="text-xs opacity-70 block mt-1">
                       {new Date(message.timestamp).toLocaleTimeString([], { 
                         hour: '2-digit', 
