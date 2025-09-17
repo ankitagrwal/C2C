@@ -118,11 +118,35 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Test case operations
-  async getTestCases(documentId?: string): Promise<TestCase[]> {
+  async getTestCases(documentId?: string): Promise<any[]> {
+    const query = db
+      .select({
+        id: testCases.id,
+        documentId: testCases.documentId,
+        customerId: testCases.customerId,
+        title: testCases.title,
+        content: testCases.content,
+        steps: testCases.steps,
+        expectedResult: testCases.expectedResult,
+        tags: testCases.tags,
+        category: testCases.category,
+        priority: testCases.priority,
+        source: testCases.source,
+        confidenceScore: testCases.confidenceScore,
+        contextUsed: testCases.contextUsed,
+        executionStatus: testCases.executionStatus,
+        createdAt: testCases.createdAt,
+        customerName: customers.name,
+        documentName: documents.filename,
+      })
+      .from(testCases)
+      .leftJoin(customers, eq(testCases.customerId, customers.id))
+      .leftJoin(documents, eq(testCases.documentId, documents.id));
+
     if (documentId) {
-      return await db.select().from(testCases).where(eq(testCases.documentId, documentId));
+      return await query.where(eq(testCases.documentId, documentId));
     }
-    return await db.select().from(testCases);
+    return await query;
   }
 
   async getTestCasesPaginated(options: {
