@@ -1,21 +1,33 @@
-import { useState, useEffect } from 'react';
-import { Check, FileText, Bot, FileSpreadsheet, CheckCircle, Menu } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
-import { Separator } from '@/components/ui/separator';
-import { Sheet, SheetContent, SheetTrigger, SheetClose } from '@/components/ui/sheet';
-import { useToast } from '@/hooks/use-toast';
-import type { Document, ProcessingJob, TestCase } from '@shared/schema';
+import { useState, useEffect } from "react";
+import {
+  Check,
+  FileText,
+  Bot,
+  FileSpreadsheet,
+  CheckCircle,
+  Menu,
+} from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
+import { Separator } from "@/components/ui/separator";
+import {
+  Sheet,
+  SheetContent,
+  SheetTrigger,
+  SheetClose,
+} from "@/components/ui/sheet";
+import { useToast } from "@/hooks/use-toast";
+import type { Document, ProcessingJob, TestCase } from "@shared/schema";
 
 // Import step components
-import UploadStep from './UploadStep';
-import ProcessingStep from './ProcessingStep';
-import ManualCSVStep from './ManualCSVStep';
-import ReviewSubmitStep from './ReviewSubmitStep';
+import UploadStep from "./UploadStep";
+import ProcessingStep from "./ProcessingStep";
+import ManualCSVStep from "./ManualCSVStep";
+import ReviewSubmitStep from "./ReviewSubmitStep";
 
 // Wizard Step Types
-export type WizardStep = 'upload' | 'processing' | 'manual' | 'review';
+export type WizardStep = "upload" | "processing" | "manual" | "review";
 
 export interface WizardState {
   currentStep: WizardStep;
@@ -24,8 +36,8 @@ export interface WizardState {
   manualTestCases: TestCase[];
   allTestCases: TestCase[];
   selectedTestCases: string[];
-  aiGeneratedCount: number;  // Count from step 2 (AI processing)
-  manualCount: number;       // Count from step 3 (manual CSV upload)
+  aiGeneratedCount: number; // Count from step 2 (AI processing)
+  manualCount: number; // Count from step 3 (manual CSV upload)
   customer: {
     id?: string;
     name?: string;
@@ -41,39 +53,42 @@ interface DocumentsWizardProps {
 
 const WIZARD_STEPS = [
   {
-    id: 'upload' as const,
-    title: 'Upload Documents',
-    description: 'Upload your business documents (5 files max, 20MB each)',
+    id: "upload" as const,
+    title: "Upload Documents",
+    description: "Upload your business documents (5 files max, 20MB each)",
     icon: FileText,
-    stepNumber: 1
+    stepNumber: 1,
   },
   {
-    id: 'processing' as const,
-    title: 'AI Processing',
-    description: 'Generate 80-120 test cases using AI analysis',
+    id: "processing" as const,
+    title: "AI Processing",
+    description: "Generate test cases using AI analysis",
     icon: Bot,
-    stepNumber: 2
+    stepNumber: 2,
   },
   {
-    id: 'manual' as const,
-    title: 'Manual Addition',
-    description: 'Add custom test cases using CSV templates',
+    id: "manual" as const,
+    title: "Manual Addition",
+    description: "Add custom test cases using CSV templates",
     icon: FileSpreadsheet,
-    stepNumber: 3
+    stepNumber: 3,
   },
   {
-    id: 'review' as const,
-    title: 'Review & Submit',
-    description: 'Review all test cases and submit for validation',
+    id: "review" as const,
+    title: "Review & Submit",
+    description: "Review all test cases and submit for validation",
     icon: CheckCircle,
-    stepNumber: 4
-  }
+    stepNumber: 4,
+  },
 ] as const;
 
-export default function DocumentsWizard({ onComplete, onCancel }: DocumentsWizardProps) {
+export default function DocumentsWizard({
+  onComplete,
+  onCancel,
+}: DocumentsWizardProps) {
   const { toast } = useToast();
   const [wizardState, setWizardState] = useState<WizardState>({
-    currentStep: 'upload',
+    currentStep: "upload",
     uploadedDocuments: [],
     processingJobs: [],
     manualTestCases: [],
@@ -81,10 +96,12 @@ export default function DocumentsWizard({ onComplete, onCancel }: DocumentsWizar
     aiGeneratedCount: 0,
     manualCount: 0,
     selectedTestCases: [],
-    customer: {}
+    customer: {},
   });
 
-  const currentStepIndex = WIZARD_STEPS.findIndex(step => step.id === wizardState.currentStep);
+  const currentStepIndex = WIZARD_STEPS.findIndex(
+    (step) => step.id === wizardState.currentStep,
+  );
   const progressPercentage = (currentStepIndex / WIZARD_STEPS.length) * 100;
 
   // Load existing test cases scoped to current documents when component mounts
@@ -93,26 +110,37 @@ export default function DocumentsWizard({ onComplete, onCancel }: DocumentsWizar
       const loadScopedTestCases = async () => {
         try {
           // Only load test cases for uploaded documents to prevent cross-tenant data exposure
-          const documentIds = wizardState.uploadedDocuments.map(doc => doc.id);
-          const promises = documentIds.map(docId => 
-            fetch(`/api/test-cases?documentId=${docId}`).then(res => res.json())
+          const documentIds = wizardState.uploadedDocuments.map(
+            (doc) => doc.id,
           );
-          
+          const promises = documentIds.map((docId) =>
+            fetch(`/api/test-cases?documentId=${docId}`).then((res) =>
+              res.json(),
+            ),
+          );
+
           const results = await Promise.all(promises);
           const existingTestCases = results.flat();
-          
+
           if (existingTestCases.length > 0) {
-            console.log('Found existing test cases for documents:', existingTestCases.length);
+            console.log(
+              "Found existing test cases for documents:",
+              existingTestCases.length,
+            );
             // Update wizard state with scoped existing test cases
-            setWizardState(prev => ({
+            setWizardState((prev) => ({
               ...prev,
               allTestCases: existingTestCases,
-              aiGeneratedCount: existingTestCases.filter((tc: any) => tc.source === 'generated').length,
-              manualCount: existingTestCases.filter((tc: any) => tc.source === 'manual').length,
+              aiGeneratedCount: existingTestCases.filter(
+                (tc: any) => tc.source === "generated",
+              ).length,
+              manualCount: existingTestCases.filter(
+                (tc: any) => tc.source === "manual",
+              ).length,
             }));
           }
         } catch (error) {
-          console.error('Failed to load scoped test cases:', error);
+          console.error("Failed to load scoped test cases:", error);
         }
       };
 
@@ -121,11 +149,11 @@ export default function DocumentsWizard({ onComplete, onCancel }: DocumentsWizar
   }, [wizardState.uploadedDocuments]);
 
   const handleStepComplete = (stepData: Partial<WizardState>) => {
-    setWizardState(prev => ({ ...prev, ...stepData }));
+    setWizardState((prev) => ({ ...prev, ...stepData }));
   };
 
   const goToStep = (stepId: WizardStep) => {
-    setWizardState(prev => ({ ...prev, currentStep: stepId }));
+    setWizardState((prev) => ({ ...prev, currentStep: stepId }));
   };
 
   const goToNextStep = () => {
@@ -134,7 +162,7 @@ export default function DocumentsWizard({ onComplete, onCancel }: DocumentsWizar
       const nextStepId = WIZARD_STEPS[nextIndex].id;
       // Only advance if we can navigate to the next step
       if (canNavigateToStep(nextStepId)) {
-        setWizardState(prev => ({ ...prev, currentStep: nextStepId }));
+        setWizardState((prev) => ({ ...prev, currentStep: nextStepId }));
       }
     }
   };
@@ -142,26 +170,31 @@ export default function DocumentsWizard({ onComplete, onCancel }: DocumentsWizar
   const goToPreviousStep = () => {
     const prevIndex = currentStepIndex - 1;
     if (prevIndex >= 0) {
-      setWizardState(prev => ({ ...prev, currentStep: WIZARD_STEPS[prevIndex].id }));
+      setWizardState((prev) => ({
+        ...prev,
+        currentStep: WIZARD_STEPS[prevIndex].id,
+      }));
     }
   };
 
   const getCurrentStepNumber = (): number => {
-    return WIZARD_STEPS.findIndex(step => step.id === wizardState.currentStep) + 1;
+    return (
+      WIZARD_STEPS.findIndex((step) => step.id === wizardState.currentStep) + 1
+    );
   };
 
   const canNavigateToStep = (stepId: WizardStep): boolean => {
-    const stepIndex = WIZARD_STEPS.findIndex(step => step.id === stepId);
-    
+    const stepIndex = WIZARD_STEPS.findIndex((step) => step.id === stepId);
+
     switch (stepId) {
-      case 'upload':
+      case "upload":
         return true;
-      case 'processing':
+      case "processing":
         return wizardState.uploadedDocuments.length > 0;
-      case 'manual':
+      case "manual":
         // Can navigate to manual step if either documents are uploaded OR processing is completed/skipped
         return wizardState.uploadedDocuments.length > 0;
-      case 'review':
+      case "review":
         // Can navigate to review only if we have test cases from either AI or manual sources
         return wizardState.allTestCases.length > 0;
       default:
@@ -170,29 +203,34 @@ export default function DocumentsWizard({ onComplete, onCancel }: DocumentsWizar
   };
 
   const getStepStatus = (stepId: WizardStep) => {
-    const stepIndex = WIZARD_STEPS.findIndex(step => step.id === stepId);
-    
+    const stepIndex = WIZARD_STEPS.findIndex((step) => step.id === stepId);
+
     if (stepIndex < currentStepIndex) {
-      return 'completed';
+      return "completed";
     } else if (stepIndex === currentStepIndex) {
-      return 'current';
+      return "current";
     } else if (canNavigateToStep(stepId)) {
-      return 'available';
+      return "available";
     } else {
-      return 'locked';
+      return "locked";
     }
   };
 
   const renderStepContent = () => {
-    console.log('Rendering step content for:', wizardState.currentStep, 'All test cases:', wizardState.allTestCases.length);
+    console.log(
+      "Rendering step content for:",
+      wizardState.currentStep,
+      "All test cases:",
+      wizardState.allTestCases.length,
+    );
     switch (wizardState.currentStep) {
-      case 'upload':
+      case "upload":
         return (
-          <UploadStep 
+          <UploadStep
             onComplete={(documents) => {
-              handleStepComplete({ 
+              handleStepComplete({
                 uploadedDocuments: documents,
-                currentStep: 'processing'
+                currentStep: "processing",
               });
             }}
             initialDocuments={wizardState.uploadedDocuments}
@@ -200,17 +238,17 @@ export default function DocumentsWizard({ onComplete, onCancel }: DocumentsWizar
             customerId={wizardState.customer.id || null}
           />
         );
-      
-      case 'processing':
+
+      case "processing":
         return (
-          <ProcessingStep 
+          <ProcessingStep
             documents={wizardState.uploadedDocuments}
             onComplete={(testCases, jobs) => {
               handleStepComplete({
                 processingJobs: jobs,
                 allTestCases: [...wizardState.manualTestCases, ...testCases],
-                aiGeneratedCount: testCases.length,  // Track AI generated count
-                currentStep: 'manual'
+                aiGeneratedCount: testCases.length, // Track AI generated count
+                currentStep: "manual",
               });
             }}
             onSkip={() => {
@@ -219,7 +257,7 @@ export default function DocumentsWizard({ onComplete, onCancel }: DocumentsWizar
                 processingJobs: [],
                 allTestCases: [...wizardState.manualTestCases],
                 aiGeneratedCount: 0,
-                currentStep: 'manual'
+                currentStep: "manual",
               });
             }}
             initialJobs={wizardState.processingJobs}
@@ -229,22 +267,22 @@ export default function DocumentsWizard({ onComplete, onCancel }: DocumentsWizar
           />
         );
 
-      case 'manual':
+      case "manual":
         return (
-          <ManualCSVStep 
+          <ManualCSVStep
             onComplete={(testCases) => {
               // Treat testCases as the authoritative manual test case list (no duplication)
-              const manualIds = new Set(testCases.map(tc => tc.id));
-              const processingTestCases = wizardState.allTestCases.filter(tc => 
-                tc.source !== 'manual' && !manualIds.has(tc.id)
+              const manualIds = new Set(testCases.map((tc) => tc.id));
+              const processingTestCases = wizardState.allTestCases.filter(
+                (tc) => tc.source !== "manual" && !manualIds.has(tc.id),
               );
               const newAllTestCases = [...processingTestCases, ...testCases];
-              
+
               handleStepComplete({
-                manualTestCases: testCases,  // Use authoritative list from ManualCSVStep
+                manualTestCases: testCases, // Use authoritative list from ManualCSVStep
                 allTestCases: newAllTestCases,
-                manualCount: testCases.length,  // Track manual count from authoritative list
-                currentStep: 'review'
+                manualCount: testCases.length, // Track manual count from authoritative list
+                currentStep: "review",
               });
             }}
             onSkip={() => {
@@ -254,32 +292,33 @@ export default function DocumentsWizard({ onComplete, onCancel }: DocumentsWizar
                   manualTestCases: [],
                   allTestCases: wizardState.allTestCases,
                   manualCount: 0,
-                  currentStep: 'review'
+                  currentStep: "review",
                 });
               } else {
                 toast({
-                  title: 'No Test Cases Available',
-                  description: 'Please generate AI test cases or upload manual test cases before proceeding to review.',
-                  variant: 'destructive',
+                  title: "No Test Cases Available",
+                  description:
+                    "Please generate AI test cases or upload manual test cases before proceeding to review.",
+                  variant: "destructive",
                 });
               }
             }}
             initialTestCases={wizardState.manualTestCases}
-            industry={wizardState.customer.industry || 'General'}
+            industry={wizardState.customer.industry || "General"}
             documentId={wizardState.uploadedDocuments[0]?.id}
           />
         );
 
-      case 'review':
+      case "review":
         return (
-          <ReviewSubmitStep 
+          <ReviewSubmitStep
             testCases={wizardState.allTestCases}
             onComplete={() => {
               onComplete(wizardState);
             }}
             initialCustomer={wizardState.customer}
-            documentIds={wizardState.uploadedDocuments.map(doc => doc.id)}
-            industry={wizardState.customer.industry || 'General'}
+            documentIds={wizardState.uploadedDocuments.map((doc) => doc.id)}
+            industry={wizardState.customer.industry || "General"}
             aiGeneratedCount={wizardState.aiGeneratedCount}
             manualCount={wizardState.manualCount}
           />
@@ -296,19 +335,29 @@ export default function DocumentsWizard({ onComplete, onCancel }: DocumentsWizar
       <div className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="px-6 py-8">
           <div className="text-center space-y-4">
-            <h1 className="text-3xl font-semibold" data-testid="text-wizard-title">
+            <h1
+              className="text-3xl font-semibold"
+              data-testid="text-wizard-title"
+            >
               AI Test Case Generation Wizard
             </h1>
             <p className="text-muted-foreground text-lg">
-              Transform your business documents into comprehensive test cases in 4 simple steps
+              Transform your business documents into comprehensive test cases in
+              4 simple steps
             </p>
             {/* Overall Progress Bar */}
             <div className="max-w-md mx-auto space-y-2 mt-6">
               <div className="flex justify-between text-sm">
                 <span className="font-medium">Progress</span>
-                <span className="text-primary font-medium">{Math.round(progressPercentage)}% Complete</span>
+                <span className="text-primary font-medium">
+                  {Math.round(progressPercentage)}% Complete
+                </span>
               </div>
-              <Progress value={progressPercentage} className="h-2" data-testid="progress-wizard" />
+              <Progress
+                value={progressPercentage}
+                className="h-2"
+                data-testid="progress-wizard"
+              />
             </div>
           </div>
         </div>
@@ -322,39 +371,53 @@ export default function DocumentsWizard({ onComplete, onCancel }: DocumentsWizar
             {WIZARD_STEPS.map((step, index) => {
               const stepStatus = getStepStatus(step.id);
               const Icon = step.icon;
-              
+
               return (
                 <button
                   key={step.id}
-                  onClick={() => canNavigateToStep(step.id) && goToStep(step.id)}
+                  onClick={() =>
+                    canNavigateToStep(step.id) && goToStep(step.id)
+                  }
                   disabled={!canNavigateToStep(step.id)}
                   className={`w-full text-left p-5 rounded-lg transition-all duration-200 relative group ${
-                    stepStatus === 'current' 
-                      ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/25 ring-2 ring-primary/20 scale-[1.02]' 
-                      : stepStatus === 'completed'
-                      ? 'bg-chart-2/10 text-chart-2 hover-elevate border-l-4 border-chart-2'
-                      : stepStatus === 'available'
-                      ? 'hover-elevate border border-border hover:border-primary/30'
-                      : 'opacity-50 cursor-not-allowed'
+                    stepStatus === "current"
+                      ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25 ring-2 ring-primary/20 scale-[1.02]"
+                      : stepStatus === "completed"
+                        ? "bg-chart-2/10 text-chart-2 hover-elevate border-l-4 border-chart-2"
+                        : stepStatus === "available"
+                          ? "hover-elevate border border-border hover:border-primary/30"
+                          : "opacity-50 cursor-not-allowed"
                   }`}
                   data-testid={`button-step-${step.id}`}
                 >
                   <div className="flex items-start space-x-4">
-                    <div className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center font-bold shadow-lg transition-all ${
-                      stepStatus === 'completed' ? 'bg-chart-2 text-background ring-2 ring-chart-2/30' :
-                      stepStatus === 'current' ? 'bg-primary-foreground text-primary ring-2 ring-primary-foreground/30' :
-                      'bg-background text-muted-foreground border-2 border-border group-hover:border-primary/30'
-                    }`}>
-                      {stepStatus === 'completed' ? <Check className="w-5 h-5" /> : step.stepNumber}
+                    <div
+                      className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center font-bold shadow-lg transition-all ${
+                        stepStatus === "completed"
+                          ? "bg-chart-2 text-background ring-2 ring-chart-2/30"
+                          : stepStatus === "current"
+                            ? "bg-primary-foreground text-primary ring-2 ring-primary-foreground/30"
+                            : "bg-background text-muted-foreground border-2 border-border group-hover:border-primary/30"
+                      }`}
+                    >
+                      {stepStatus === "completed" ? (
+                        <Check className="w-5 h-5" />
+                      ) : (
+                        step.stepNumber
+                      )}
                     </div>
                     <div className="min-w-0 flex-1 space-y-1">
                       <div className="flex items-center space-x-2 mb-2">
                         <Icon className="w-5 h-5 flex-shrink-0" />
-                        <span className="font-semibold text-base">{step.title}</span>
+                        <span className="font-semibold text-base">
+                          {step.title}
+                        </span>
                       </div>
-                      <p className={`text-sm leading-relaxed ${
-                        stepStatus === 'current' ? 'opacity-90' : 'opacity-75'
-                      }`}>
+                      <p
+                        className={`text-sm leading-relaxed ${
+                          stepStatus === "current" ? "opacity-90" : "opacity-75"
+                        }`}
+                      >
                         {step.description}
                       </p>
                     </div>
@@ -383,35 +446,47 @@ export default function DocumentsWizard({ onComplete, onCancel }: DocumentsWizar
                     {WIZARD_STEPS.map((step, index) => {
                       const stepStatus = getStepStatus(step.id);
                       const Icon = step.icon;
-                      
+
                       return (
                         <SheetClose asChild key={step.id}>
                           <button
-                            onClick={() => canNavigateToStep(step.id) && goToStep(step.id)}
+                            onClick={() =>
+                              canNavigateToStep(step.id) && goToStep(step.id)
+                            }
                             disabled={!canNavigateToStep(step.id)}
                             className={`w-full text-left p-4 rounded-lg transition-all relative ${
-                              stepStatus === 'current' 
-                                ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/25' 
-                                : stepStatus === 'completed'
-                                ? 'bg-chart-2/10 text-chart-2 border-l-4 border-chart-2'
-                                : stepStatus === 'available'
-                                ? 'border border-border'
-                                : 'opacity-50 cursor-not-allowed'
+                              stepStatus === "current"
+                                ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25"
+                                : stepStatus === "completed"
+                                  ? "bg-chart-2/10 text-chart-2 border-l-4 border-chart-2"
+                                  : stepStatus === "available"
+                                    ? "border border-border"
+                                    : "opacity-50 cursor-not-allowed"
                             }`}
                             data-testid={`button-step-mobile-${step.id}`}
                           >
                             <div className="flex items-start space-x-3">
-                              <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${
-                                stepStatus === 'completed' ? 'bg-chart-2 text-background' :
-                                stepStatus === 'current' ? 'bg-primary-foreground text-primary' :
-                                'bg-background text-muted-foreground border border-border'
-                              }`}>
-                                {stepStatus === 'completed' ? <Check className="w-4 h-4" /> : step.stepNumber}
+                              <div
+                                className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${
+                                  stepStatus === "completed"
+                                    ? "bg-chart-2 text-background"
+                                    : stepStatus === "current"
+                                      ? "bg-primary-foreground text-primary"
+                                      : "bg-background text-muted-foreground border border-border"
+                                }`}
+                              >
+                                {stepStatus === "completed" ? (
+                                  <Check className="w-4 h-4" />
+                                ) : (
+                                  step.stepNumber
+                                )}
                               </div>
                               <div className="min-w-0 flex-1">
                                 <div className="flex items-center space-x-2 mb-1">
                                   <Icon className="w-4 h-4 flex-shrink-0" />
-                                  <span className="font-medium">{step.title}</span>
+                                  <span className="font-medium">
+                                    {step.title}
+                                  </span>
                                 </div>
                                 <p className="text-xs opacity-75 leading-relaxed">
                                   {step.description}
@@ -430,44 +505,57 @@ export default function DocumentsWizard({ onComplete, onCancel }: DocumentsWizar
                 Step {getCurrentStepNumber()} of {WIZARD_STEPS.length}
               </div>
             </div>
-            
+
             {/* Mobile Step Indicator */}
             <div className="flex items-center space-x-1 overflow-x-auto pb-2">
               {WIZARD_STEPS.map((step, index) => {
                 const stepStatus = getStepStatus(step.id);
                 const Icon = step.icon;
                 return (
-                  <div key={step.id} className="flex items-center flex-shrink-0">
-                    <div className={`flex flex-col items-center space-y-1 px-2 py-2 rounded-lg min-w-0 ${
-                      stepStatus === 'current' ? 'bg-primary/10' : ''
-                    }`}>
-                      <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs transition-all ${
-                        stepStatus === 'completed' 
-                          ? 'bg-chart-2 text-background' 
-                          : stepStatus === 'current'
-                          ? 'bg-primary text-primary-foreground'
-                          : stepStatus === 'available'
-                          ? 'border border-border text-muted-foreground'
-                          : 'border border-border text-muted-foreground/50'
-                      }`}>
-                        {stepStatus === 'completed' ? (
+                  <div
+                    key={step.id}
+                    className="flex items-center flex-shrink-0"
+                  >
+                    <div
+                      className={`flex flex-col items-center space-y-1 px-2 py-2 rounded-lg min-w-0 ${
+                        stepStatus === "current" ? "bg-primary/10" : ""
+                      }`}
+                    >
+                      <div
+                        className={`w-7 h-7 rounded-full flex items-center justify-center text-xs transition-all ${
+                          stepStatus === "completed"
+                            ? "bg-chart-2 text-background"
+                            : stepStatus === "current"
+                              ? "bg-primary text-primary-foreground"
+                              : stepStatus === "available"
+                                ? "border border-border text-muted-foreground"
+                                : "border border-border text-muted-foreground/50"
+                        }`}
+                      >
+                        {stepStatus === "completed" ? (
                           <Check className="w-3 h-3" />
                         ) : (
                           <Icon className="w-3 h-3" />
                         )}
                       </div>
-                      <span className={`text-xs font-medium text-center truncate max-w-16 ${
-                        stepStatus === 'current' ? 'text-primary' :
-                        stepStatus === 'completed' ? 'text-chart-2' :
-                        'text-muted-foreground'
-                      }`}>
+                      <span
+                        className={`text-xs font-medium text-center truncate max-w-16 ${
+                          stepStatus === "current"
+                            ? "text-primary"
+                            : stepStatus === "completed"
+                              ? "text-chart-2"
+                              : "text-muted-foreground"
+                        }`}
+                      >
                         {step.title}
                       </span>
                     </div>
                     {index < WIZARD_STEPS.length - 1 && (
-                      <div className={`w-3 h-0.5 mx-1 flex-shrink-0 ${
-                        index < currentStepIndex ? 'bg-chart-2' : 'bg-border'
-                      }`} />
+                      <div
+                        className={`w-3 h-0.5 mx-1 flex-shrink-0 ${
+                          index < currentStepIndex ? "bg-chart-2" : "bg-border"
+                        }`}
+                      />
                     )}
                   </div>
                 );
@@ -475,9 +563,7 @@ export default function DocumentsWizard({ onComplete, onCancel }: DocumentsWizar
             </div>
           </div>
 
-          <div className="p-4 md:p-8">
-            {renderStepContent()}
-          </div>
+          <div className="p-4 md:p-8">{renderStepContent()}</div>
         </div>
       </div>
     </div>
