@@ -437,6 +437,8 @@ export default function ProcessingStep({
                     </Badge>
                   </div>
 
+                  {/* Individual job progress bars hidden as requested */}
+                  {/* 
                   {jobStatus === 'processing' && (
                     <div className="space-y-1">
                       <div className="flex justify-between text-xs">
@@ -450,6 +452,7 @@ export default function ProcessingStep({
                       />
                     </div>
                   )}
+                  */}
 
                   {jobStatus === 'completed' && (
                     <div className="text-sm">
