@@ -377,7 +377,7 @@ export default function ReportsPage() {
         variant: 'default',
       });
     }
-  }, [error, toast]);
+  }, [error]); // Removed toast from dependencies to prevent infinite loop
 
   return (
     <div className="container mx-auto py-6 space-y-6">
