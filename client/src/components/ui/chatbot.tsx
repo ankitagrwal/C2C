@@ -121,7 +121,7 @@ export function Chatbot({ className }: ChatbotProps) {
         onClick={toggleChat}
         size="icon"
         className={cn(
-          "fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg z-50",
+          "fixed bottom-4 right-4 h-14 w-14 rounded-full shadow-lg z-50",
           "bg-primary text-primary-foreground hover-elevate active-elevate-2",
           "border-2 border-primary-border",
           className
@@ -136,7 +136,7 @@ export function Chatbot({ className }: ChatbotProps) {
   return (
     <Card
       className={cn(
-        "fixed bottom-6 right-6 w-96 shadow-xl z-50 transition-all duration-300",
+        "fixed bottom-4 right-4 w-96 shadow-xl z-50 transition-all duration-300",
         isMinimized ? "h-16" : "h-[500px]",
         "bg-card border-card-border",
         className
