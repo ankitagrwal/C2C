@@ -21,6 +21,8 @@ interface ChatbotProps {
 
 // Function to format message content with markdown-style formatting
 function formatMessageContent(content: string): JSX.Element {
+  console.log('Formatting content:', content); // Debug log
+  
   // Split content into lines
   const lines = content.split('\n');
   const formattedLines: JSX.Element[] = [];
@@ -54,24 +56,38 @@ function formatMessageContent(content: string): JSX.Element {
   return <div>{formattedLines}</div>;
 }
 
-// Function to convert **text** to bold
+// Function to convert **text** to bold - simpler approach
 function formatBoldText(text: string): JSX.Element {
-  const parts = text.split(/(\*\*[^*]+\*\*)/g);
+  console.log('Formatting bold text:', text); // Debug log
   
-  return (
-    <>
-      {parts.map((part, index) => {
-        if (part.startsWith('**') && part.endsWith('**')) {
-          // Bold text
-          const boldText = part.slice(2, -2);
-          return <strong key={index} className="font-semibold text-foreground">{boldText}</strong>;
-        } else {
-          // Regular text
-          return <span key={index}>{part}</span>;
-        }
-      })}
-    </>
-  );
+  // Simple replacement approach
+  if (!text.includes('**')) {
+    return <span>{text}</span>;
+  }
+
+  // Split by ** and process pairs
+  const parts = text.split('**');
+  const elements: JSX.Element[] = [];
+  
+  for (let i = 0; i < parts.length; i++) {
+    if (i % 2 === 0) {
+      // Even indices are regular text
+      if (parts[i]) {
+        elements.push(<span key={`text-${i}`}>{parts[i]}</span>);
+      }
+    } else {
+      // Odd indices are bold text
+      if (parts[i]) {
+        elements.push(
+          <strong key={`bold-${i}`} className="font-bold text-foreground">
+            {parts[i]}
+          </strong>
+        );
+      }
+    }
+  }
+
+  return <>{elements}</>;
 }
 
 export function Chatbot({ className }: ChatbotProps) {
