@@ -329,7 +329,8 @@ export default function ProcessingStep({
             </div>
           ) : (
             <>
-              {/* Overall Progress */}
+              {/* Overall Progress - Hidden as requested */}
+              {/* 
               <div className="space-y-2">
                 <div className="flex justify-between items-center">
                   <span className="text-sm font-medium">Overall Progress</span>
@@ -343,6 +344,7 @@ export default function ProcessingStep({
                   data-testid="progress-overall"
                 />
               </div>
+              */}
 
               {/* Status Summary */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
