@@ -134,50 +134,51 @@ export default function ProcessingStep({
   // Handle side effects when query data changes
   useEffect(() => {
     const queryData = jobStatusQuery.data;
-    if (!queryData || Object.keys(queryData).length === 0) return;
-
-    // Update job statuses
-    setJobStatuses(queryData);
-    
-    // Update processing jobs with latest status
-    setProcessingJobs(prev => prev.map(job => {
-      const status = queryData[job.id];
-      return status ? status.job : job;
-    }));
-
-    // Aggregate all test cases
-    const allTestCases = Object.values(queryData).flatMap(status => status.testCases);
-    setAllTestCases(allTestCases);
-
-    // Check if all jobs are completed
-    const completedJobs = Object.values(queryData).filter(status => 
-      status.job.status === 'completed' || status.job.status === 'failed'
-    );
-
-    if (completedJobs.length === processingJobs.length && processingJobs.length > 0) {
-      setIsPolling(false);
-      const successfulJobs = completedJobs.filter(status => status.job.status === 'completed');
-      const totalTestCases = successfulJobs.flatMap(status => status.testCases).length;
-      const updatedJobs = processingJobs.map(job => {
+    // Guard the entire effect body instead of early return
+    if (queryData && Object.keys(queryData).length > 0) {
+      // Update job statuses
+      setJobStatuses(queryData);
+      
+      // Update processing jobs with latest status
+      setProcessingJobs(prev => prev.map(job => {
         const status = queryData[job.id];
         return status ? status.job : job;
-      });
-      
-      if (successfulJobs.length > 0) {
-        toast({
-          title: 'Processing Complete',
-          description: `Successfully generated ${totalTestCases} test cases from ${successfulJobs.length} documents`,
+      }));
+
+      // Aggregate all test cases
+      const allTestCases = Object.values(queryData).flatMap(status => status.testCases);
+      setAllTestCases(allTestCases);
+
+      // Check if all jobs are completed
+      const completedJobs = Object.values(queryData).filter(status => 
+        status.job.status === 'completed' || status.job.status === 'failed'
+      );
+
+      if (completedJobs.length === processingJobs.length && processingJobs.length > 0) {
+        setIsPolling(false);
+        const successfulJobs = completedJobs.filter(status => status.job.status === 'completed');
+        const totalTestCases = successfulJobs.flatMap(status => status.testCases).length;
+        const updatedJobs = processingJobs.map(job => {
+          const status = queryData[job.id];
+          return status ? status.job : job;
         });
-        onComplete(allTestCases, updatedJobs);
-      } else {
-        toast({
-          title: 'Processing Failed',
-          description: 'All processing jobs failed. Please try again.',
-          variant: 'destructive',
-        });
+        
+        if (successfulJobs.length > 0) {
+          toast({
+            title: 'Processing Complete',
+            description: `Successfully generated ${totalTestCases} test cases from ${successfulJobs.length} documents`,
+          });
+          onComplete(allTestCases, updatedJobs);
+        } else {
+          toast({
+            title: 'Processing Failed',
+            description: 'All processing jobs failed. Please try again.',
+            variant: 'destructive',
+          });
+        }
       }
     }
-  }, [jobStatusQuery.data, processingJobs.length, onComplete]); // Removed toast to prevent infinite loop
+  }, [jobStatusQuery.data, processingJobs.length, onComplete]); // Fixed: No early return, proper guard block
 
   // Calculate overall progress
   const calculateOverallProgress = useCallback(() => {
