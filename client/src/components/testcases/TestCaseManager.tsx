@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -213,6 +214,7 @@ export default function TestCaseManager() {
   const [selectedCategory, setSelectedCategory] = useState('All Categories');
   const [selectedStatus, setSelectedStatus] = useState('All Statuses');
   const [selectedSource, setSelectedSource] = useState('All Sources');
+  const [selectedCustomer, setSelectedCustomer] = useState('All Customers');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
@@ -408,6 +410,10 @@ export default function TestCaseManager() {
     );
   }
 
+  // Get unique customers for filter dropdown
+  const customers = Array.from(new Set(testCases.map((tc: any) => tc.customerName).filter(Boolean))).sort();
+  const customerOptions = ['All Customers', ...customers];
+
   const filteredTestCases = testCases.filter((tc: TestCase) => {
     const matchesSearch = tc.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          (tc.documentName || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -415,8 +421,9 @@ export default function TestCaseManager() {
     const matchesCategory = selectedCategory === 'All Categories' || tc.category === selectedCategory;
     const matchesStatus = selectedStatus === 'All Statuses' || tc.executionStatus === selectedStatus;
     const matchesSource = selectedSource === 'All Sources' || tc.source === selectedSource;
+    const matchesCustomer = selectedCustomer === 'All Customers' || tc.customerName === selectedCustomer;
     
-    return matchesSearch && matchesCategory && matchesStatus && matchesSource;
+    return matchesSearch && matchesCategory && matchesStatus && matchesSource && matchesCustomer;
   });
 
   const getStatusIcon = (status: string) => {
@@ -518,7 +525,7 @@ export default function TestCaseManager() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
             <div className="relative">
               <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
               <Input
@@ -562,6 +569,17 @@ export default function TestCaseManager() {
                 ))}
               </SelectContent>
             </Select>
+
+            <Select value={selectedCustomer} onValueChange={setSelectedCustomer}>
+              <SelectTrigger data-testid="select-filter-customer">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {customerOptions.map((customer: string) => (
+                  <SelectItem key={customer} value={customer}>{customer}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           
           <div className="flex items-center justify-between mt-4">
@@ -576,6 +594,7 @@ export default function TestCaseManager() {
                 setSelectedCategory('All Categories');
                 setSelectedStatus('All Statuses');
                 setSelectedSource('All Sources');
+                setSelectedCustomer('All Customers');
               }}
               data-testid="button-clear-filters"
             >
@@ -592,82 +611,94 @@ export default function TestCaseManager() {
           <CardDescription>Generated and manual test cases from uploaded documents</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {filteredTestCases.map((testCase: TestCase) => (
-              <div key={testCase.id} className="border rounded-lg p-4 hover-elevate">
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-2 mb-2">
-                      <Badge variant="outline" className="text-xs">
-                        {testCase.category}
-                      </Badge>
-                      {getStatusBadge(testCase.executionStatus)}
-                      <Badge variant="secondary" className="text-xs capitalize">
-                        {testCase.source}
-                      </Badge>
-                      {testCase.confidenceScore && (
-                        <Badge variant="outline" className="text-xs">
-                          {Math.round(testCase.confidenceScore * 100)}% confidence
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Test Case</TableHead>
+                <TableHead>Category</TableHead>
+                <TableHead>Customer</TableHead>
+                <TableHead>Document</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredTestCases.map((testCase: TestCase) => (
+                <TableRow key={testCase.id} data-testid={`row-testcase-${testCase.id}`}>
+                  <TableCell className="max-w-md">
+                    <div className="space-y-1">
+                      <p className="font-medium text-sm">{testCase.content}</p>
+                      <div className="flex items-center space-x-2">
+                        <Badge variant="secondary" className="text-xs capitalize">
+                          {testCase.source}
                         </Badge>
-                      )}
+                        {testCase.confidenceScore && (
+                          <Badge variant="outline" className="text-xs">
+                            {Math.round(testCase.confidenceScore * 100)}% confidence
+                          </Badge>
+                        )}
+                      </div>
                     </div>
-                    <p className="font-medium text-sm mb-2">{testCase.content}</p>
-                    <div className="flex items-center space-x-4 text-xs text-muted-foreground">
-                      <span className="flex items-center space-x-1">
-                        <FileText className="h-3 w-3" />
-                        <span>{testCase.documentName}</span>
-                      </span>
-                      <span>{testCase.customerName}</span>
-                      <span>{new Date(testCase.createdAt).toLocaleDateString()}</span>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="outline" className="text-xs">
+                      {testCase.category}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-sm">
+                    {testCase.customerName}
+                  </TableCell>
+                  <TableCell className="text-sm">
+                    <div className="flex items-center space-x-1">
+                      <FileText className="h-3 w-3" />
+                      <span>{testCase.documentName}</span>
                     </div>
-                  </div>
-                  
-                  <div className="flex items-center space-x-2">
-                    {getStatusIcon(testCase.executionStatus)}
-                    
-                    <Select
-                      value={testCase.executionStatus}
-                      onValueChange={(value) => handleStatusChange(testCase.id, value)}
-                    >
-                      <SelectTrigger className="w-32" data-testid={`select-status-${testCase.id}`}>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="ready">Ready</SelectItem>
-                        <SelectItem value="in_progress">In Progress</SelectItem>
-                        <SelectItem value="complete">Complete</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <Button variant="outline" size="sm" data-testid={`button-view-${testCase.id}`}>
-                          <Eye className="h-3 w-3" />
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center space-x-2">
+                      {getStatusIcon(testCase.executionStatus)}
+                      {getStatusBadge(testCase.executionStatus)}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center space-x-2">
+                      <Select
+                        value={testCase.executionStatus}
+                        onValueChange={(value) => handleStatusChange(testCase.id, value)}
+                      >
+                        <SelectTrigger className="w-32" data-testid={`select-status-${testCase.id}`}>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="ready">Ready</SelectItem>
+                          <SelectItem value="in_progress">In Progress</SelectItem>
+                          <SelectItem value="complete">Complete</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      
+                      <Dialog>
+                        <DialogTrigger asChild>
+                            <Button variant="outline" size="sm" data-testid={`button-view-${testCase.id}`}>
+                              <Eye className="h-3 w-3" />
+                            </Button>
+                          </DialogTrigger>
+                          <TestCaseDetailDialog testCase={testCase} onSave={handleSaveTestCase} />
+                        </Dialog>
+                        
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDeleteTestCase(testCase.id)}
+                          data-testid={`button-delete-${testCase.id}`}
+                        >
+                          <Trash2 className="h-3 w-3" />
                         </Button>
-                      </DialogTrigger>
-                      <TestCaseDetailDialog testCase={testCase} onSave={handleSaveTestCase} />
-                    </Dialog>
-                    
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleDeleteTestCase(testCase.id)}
-                      data-testid={`button-delete-${testCase.id}`}
-                    >
-                      <Trash2 className="h-3 w-3" />
-                    </Button>
-                  </div>
-                </div>
-                
-                {testCase.contextUsed && (
-                  <div className="bg-muted/30 p-3 rounded-md">
-                    <p className="text-xs text-muted-foreground mb-1">RAG Context:</p>
-                    <p className="text-xs">{testCase.contextUsed}</p>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         </CardContent>
       </Card>
     </div>
