@@ -97,7 +97,7 @@ export default function ReviewSubmitStep({
     defaultValues: {
       name: initialCustomer?.name || '',
       industry: initialCustomer?.industry || industry,
-      solutionId: initialCustomer?.solutionId || '',
+      solutionId: initialCustomer?.solutionId || `SOL-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`,
       contactName: '',
       contactEmail: '',
       contactPhone: '',
@@ -290,7 +290,7 @@ export default function ReviewSubmitStep({
       const customerPayload = {
         name: data.name,
         industry: data.industry,
-        solutionId: data.solutionId
+        solutionId: data.solutionId || `SOL-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`
       };
 
       const response = await fetch('/api/test-cases/submit', {
