@@ -166,7 +166,7 @@ export default function UploadStep({
     }
 
     return validFiles;
-  }, [uploadFiles, toast]);
+  }, [uploadFiles]); // Removed toast to prevent infinite loop
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();

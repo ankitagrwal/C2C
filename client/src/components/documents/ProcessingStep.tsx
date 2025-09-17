@@ -177,7 +177,7 @@ export default function ProcessingStep({
         });
       }
     }
-  }, [jobStatusQuery.data, processingJobs.length, toast, onComplete]);
+  }, [jobStatusQuery.data, processingJobs.length, onComplete]); // Removed toast to prevent infinite loop
 
   // Calculate overall progress
   const calculateOverallProgress = useCallback(() => {
