@@ -108,7 +108,7 @@ export default function ReviewSubmitStep({
   });
 
   // Common section headers pattern for robust parsing with flexible punctuation
-  const sectionHeaderRegex = /^(steps?|test steps|test details|procedures?|preconditions?|expected results?|expected outcome|expected behavio[u]?r|results?|acceptance criteria|notes?)[\s:.-]*$/i;
+  const sectionHeaderRegex = /^(steps?|test steps|test details|procedures?|preconditions?|expected results?|expected result|expected outcome|expected behavio[u]?r|results?|acceptance criteria|notes?|description)[\s:.-]*$/i;
   
   // Memoized parsing for performance
   const parsedTestCases = useMemo(() => {
@@ -156,9 +156,10 @@ export default function ReviewSubmitStep({
       let descStart = -1;
       let descEnd = -1;
       
-      // Find the "Description:" section
+      // Find the "Description:" section (can be on same line or separate line)
       for (let i = 0; i < lines.length; i++) {
-        if (/^description[\s:.-]*$/i.test(lines[i].trim())) {
+        const line = lines[i].trim();
+        if (/^description[\s:.-]/i.test(line)) {
           descStart = i;
           break;
         }
