@@ -29,6 +29,7 @@ async function generateTestCasesWithGemini(systemPrompt: string, userPrompt: str
     console.log("Making API call to Gemini 2.5 Flash...");
     const startTime = Date.now();
 
+    // Use correct Gemini SDK format 
     const response = await geminiClient.models.generateContent({
       model: "gemini-2.5-flash",
       config: {
@@ -46,7 +47,9 @@ async function generateTestCasesWithGemini(systemPrompt: string, userPrompt: str
                   description: { type: "string" },
                   steps: {
                     type: "array",
-                    items: { type: "string" }
+                    items: { type: "string" },
+                    minItems: 5,
+                    maxItems: 10
                   },
                   expectedResult: { type: "string" },
                   category: { type: "string" },
@@ -77,6 +80,7 @@ async function generateTestCasesWithGemini(systemPrompt: string, userPrompt: str
     console.log(`Gemini API call completed in ${duration}ms`);
 
     const content = response.text;
+    
     if (!content) {
       throw new Error("Empty response from Gemini");
     }
@@ -87,7 +91,8 @@ async function generateTestCasesWithGemini(systemPrompt: string, userPrompt: str
 
     return {
       content: content,
-      duration: duration
+      duration: duration,
+      provider: "gemini" // Mark that Gemini handled this request
     };
 
   } catch (error) {
@@ -520,8 +525,9 @@ Generate test cases that thoroughly validate the requirements, processes, potent
             { role: "user", content: userPrompt },
             { role: "assistant", content: "I understand. I will generate comprehensive test cases with exactly 5-10 detailed steps per test case and include extensive edge case coverage. I will respond with ONLY valid JSON." }
           ],
-          max_tokens: 16000, // Set reasonable limit to prevent truncation
+          max_tokens: 8000, // Reduced to prevent truncation 
           temperature: 0.1, // Lower temperature for more consistent JSON output
+          response_format: { type: "json_object" } // Enforce JSON output
         }, {
           signal: controller.signal
         });
@@ -579,7 +585,7 @@ Generate test cases that thoroughly validate the requirements, processes, potent
         console.log("🌟 Gemini AI is now handling your request...");
         const geminiResult = await generateTestCasesWithGemini(systemPrompt, userPrompt);
         
-        // Process Gemini result same way as OpenRouter
+        // Process Gemini result
         content = geminiResult.content;
         console.log("✅ Gemini successfully generated test cases!");
         
@@ -587,6 +593,9 @@ Generate test cases that thoroughly validate the requirements, processes, potent
         if (!content || content.length < 50) {
           throw new Error("Gemini returned invalid or too short response");
         }
+        
+        // Set the provider correctly for tracking
+        config.provider = "gemini";
         
       } catch (geminiError) {
         console.error("❌ Gemini fallback also failed:", geminiError);
@@ -683,11 +692,35 @@ Generate test cases that thoroughly validate the requirements, processes, potent
         console.error("Second parse attempt failed:", secondError);
         console.error("Fixed content (first 200 chars):", fixedContent.substring(0, 200));
         
-        // Check if this looks like a truncated response
-        const looksLikeTruncated = !content.endsWith('}') && !content.endsWith(']') && content.includes('{');
-        const errorType = looksLikeTruncated ? "truncated" : "malformed";
-        
-        throw new Error(`Failed to parse AI response as JSON (${errorType}). Response length: ${content.length} chars. First 100 chars: "${content.substring(0, 100)}..."`);
+        // If this was from OpenRouter (not already a fallback), try Gemini
+        if (config.provider === "openrouter" && geminiClient) {
+          console.log("🔄 JSON parsing failed with primary agent, switching to Gemini fallback...");
+          console.log("🤖 My primary AI friend seems to be speaking in tongues! Let me consult my backup genius...");
+          
+          try {
+            console.log("🌟 Gemini AI is now handling your request...");
+            const geminiResult = await generateTestCasesWithGemini(systemPrompt, userPrompt);
+            
+            content = geminiResult.content;
+            console.log("✅ Gemini successfully generated test cases!");
+            config.provider = "gemini";
+            
+            // Parse Gemini's structured JSON response
+            result = JSON.parse(content);
+            console.log("✅ Gemini JSON parsed successfully!");
+            
+          } catch (geminiError) {
+            console.error("❌ Gemini fallback also failed:", geminiError);
+            const openRouterError = `OpenRouter JSON parse error: ${parseError instanceof Error ? parseError.message : 'Unknown parse error'}`;
+            const geminiErrorMsg = geminiError instanceof Error ? geminiError.message : "Unknown Gemini error";
+            throw new Error(`Both AI agents failed. ${openRouterError}. Gemini: ${geminiErrorMsg}`);
+          }
+        } else {
+          // Already tried fallback or no fallback available
+          const looksLikeTruncated = !content.endsWith('}') && !content.endsWith(']') && content.includes('{');
+          const errorType = looksLikeTruncated ? "truncated" : "malformed";
+          throw new Error(`Failed to parse AI response as JSON (${errorType}). Response length: ${content.length} chars. First 100 chars: "${content.substring(0, 100)}..."`);
+        }
       }
     }
 
