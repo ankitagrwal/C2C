@@ -29,7 +29,10 @@ import {
 // Mock test cases data //todo: remove mock functionality
 type TestCase = {
   id: string;
+  title?: string;
   content: string;
+  steps?: string[];
+  expectedResult?: string;
   category: string;
   source: string;
   confidenceScore: number | null;
@@ -123,7 +126,7 @@ function TestCaseDetailDialog({ testCase, onSave }: TestCaseDetailDialogProps) {
   };
 
   return (
-    <DialogContent className="max-w-2xl max-h-[80vh]">
+    <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
       <DialogHeader>
         <DialogTitle>Test Case Details</DialogTitle>
         <DialogDescription>
@@ -132,8 +135,41 @@ function TestCaseDetailDialog({ testCase, onSave }: TestCaseDetailDialogProps) {
       </DialogHeader>
       
       <div className="space-y-4">
+        {testCase.title && (
+          <div>
+            <Label htmlFor="title">Test Case Title</Label>
+            <div className="p-3 bg-muted/50 rounded-md text-sm font-medium" data-testid="text-title">
+              {testCase.title}
+            </div>
+          </div>
+        )}
+
+        {testCase.steps && testCase.steps.length > 0 && (
+          <div>
+            <Label>Test Steps ({testCase.steps.length} steps)</Label>
+            <div className="bg-muted/50 p-4 rounded-md space-y-2" data-testid="steps-container">
+              <ol className="list-decimal list-inside space-y-2">
+                {testCase.steps.map((step, index) => (
+                  <li key={index} className="text-sm leading-relaxed" data-testid={`step-${index + 1}`}>
+                    <span className="ml-2">{step}</span>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          </div>
+        )}
+
+        {testCase.expectedResult && (
+          <div>
+            <Label>Expected Result</Label>
+            <div className="bg-muted/50 p-3 rounded-md text-sm" data-testid="text-expected-result">
+              {testCase.expectedResult}
+            </div>
+          </div>
+        )}
+
         <div>
-          <Label htmlFor="content">Test Case Content</Label>
+          <Label htmlFor="content">Additional Content</Label>
           <Textarea
             id="content"
             value={content}
@@ -575,8 +611,8 @@ export default function TestCaseManager() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {customerOptions.map((customer: string) => (
-                  <SelectItem key={customer} value={customer}>{customer}</SelectItem>
+                {customerOptions.map((customer) => (
+                  <SelectItem key={String(customer)} value={String(customer)}>{String(customer)}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
