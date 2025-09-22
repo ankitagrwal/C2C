@@ -201,7 +201,7 @@ Respond with ONLY this exact JSON format (no additional text):
     }
 
     const response = await openRouter.chat.completions.create({
-      model: "google/gemini-flash-1.5",
+      model: "qwen/qwen-2.5-72b-instruct:free",
       messages: [{ role: "user", content: prompt }],
     });
 
@@ -371,7 +371,7 @@ Generate test cases that thoroughly validate the requirements, processes, and po
 
     const prompt = `${systemPrompt}\n\n${userPrompt}`;
     const response = await openRouter.chat.completions.create({
-      model: "google/gemini-flash-1.5",
+      model: "qwen/qwen-2.5-72b-instruct:free",
       messages: [{ role: "user", content: prompt }],
     });
 
