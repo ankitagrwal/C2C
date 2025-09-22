@@ -412,18 +412,54 @@ Generate test cases that thoroughly validate the requirements, processes, potent
       );
     }
 
-    const response = await openRouter.chat.completions.create({
-      model: "qwen/qwen-2.5-72b-instruct:free",
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt },
-        { role: "assistant", content: "I understand. I will generate comprehensive test cases with exactly 5-10 detailed steps per test case and include extensive edge case coverage. I will respond with ONLY valid JSON." }
-      ],
-    });
+    // Add timeout and response size validation
+    console.log("Making AI API call to OpenRouter...");
+    const apiStartTime = Date.now();
+    
+    let response;
+    try {
+      response = await openRouter.chat.completions.create({
+        model: "qwen/qwen-2.5-72b-instruct:free",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
+          { role: "assistant", content: "I understand. I will generate comprehensive test cases with exactly 5-10 detailed steps per test case and include extensive edge case coverage. I will respond with ONLY valid JSON." }
+        ],
+        max_tokens: 16000, // Set reasonable limit to prevent truncation
+        temperature: 0.1, // Lower temperature for more consistent JSON output
+      });
+    } catch (apiError) {
+      console.error("OpenRouter API call failed:", apiError);
+      throw new Error(`AI API call failed: ${apiError instanceof Error ? apiError.message : "Unknown API error"}`);
+    }
 
-    content = response.choices[0].message.content || "";
+    const apiDuration = Date.now() - apiStartTime;
+    console.log(`AI API call completed in ${apiDuration}ms`);
+
+    // Validate API response structure
+    if (!response || !response.choices || response.choices.length === 0) {
+      throw new Error("Invalid API response structure - no choices returned");
+    }
+
+    content = response.choices[0].message?.content || "";
+    
+    // Log response details for debugging
+    console.log("AI Response details:");
+    console.log("- Content length:", content.length);
+    console.log("- Finish reason:", response.choices[0].finish_reason);
+    console.log("- Usage:", response.usage);
+    
     if (!content) {
-      throw new Error("No content in OpenRouter response");
+      throw new Error("No content in OpenRouter response - empty message content");
+    }
+    
+    if (content.length < 50) {
+      throw new Error(`AI response suspiciously short (${content.length} chars): "${content}"`);
+    }
+    
+    // Check if response was truncated
+    if (response.choices[0].finish_reason === 'length') {
+      console.warn("⚠️  AI response may have been truncated due to max_tokens limit");
     }
 
     // Strip markdown code blocks and clean response
