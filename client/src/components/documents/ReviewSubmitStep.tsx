@@ -113,84 +113,100 @@ export default function ReviewSubmitStep({
   // Memoized parsing for performance
   const parsedTestCases = useMemo(() => {
     return testCases.map(testCase => {
+      // For parsing content field (backwards compatibility)
       const lines = testCase.content.split('\n');
       
-      // Extract steps
-      let stepsStart = -1;
-      let stepsEnd = -1;
-      
-      // Find the "Steps:" section with flexible matching
-      for (let i = 0; i < lines.length; i++) {
-        const line = lines[i].trim();
-        if (/^(steps?|test steps|test details|procedures?)[\s:.-]*$/i.test(line)) {
-          stepsStart = i + 1;
-          break;
-        }
-      }
-      
+      // First check if we have the new steps array format
       let steps = '';
-      if (stepsStart !== -1) {
-        // Find the end of steps (next section header, not blank lines)
-        for (let i = stepsStart; i < lines.length; i++) {
+      if (testCase.steps && Array.isArray(testCase.steps) && testCase.steps.length > 0) {
+        // Format steps array as numbered list
+        steps = testCase.steps
+          .map((step, index) => `${index + 1}. ${step}`)
+          .join('\n');
+      } else {
+        // Fall back to parsing content field for backwards compatibility
+        // Extract steps from content
+        let stepsStart = -1;
+        let stepsEnd = -1;
+        
+        // Find the "Steps:" section with flexible matching
+        for (let i = 0; i < lines.length; i++) {
           const line = lines[i].trim();
-          if (sectionHeaderRegex.test(line) && !/^(steps?|test steps|test details|procedures?)[\s:.-]*$/i.test(line)) {
-            stepsEnd = i;
+          if (/^(steps?|test steps|test details|procedures?)[\s:.-]*$/i.test(line)) {
+            stepsStart = i + 1;
             break;
           }
         }
         
-        if (stepsEnd === -1) stepsEnd = lines.length;
-        
-        // Skip leading blank lines after steps header
-        let actualStart = stepsStart;
-        while (actualStart < stepsEnd && !lines[actualStart].trim()) {
-          actualStart++;
+        if (stepsStart !== -1) {
+          // Find the end of steps (next section header, not blank lines)
+          for (let i = stepsStart; i < lines.length; i++) {
+            const line = lines[i].trim();
+            if (sectionHeaderRegex.test(line) && !/^(steps?|test steps|test details|procedures?)[\s:.-]*$/i.test(line)) {
+              stepsEnd = i;
+              break;
+            }
+          }
+          
+          if (stepsEnd === -1) stepsEnd = lines.length;
+          
+          // Skip leading blank lines after steps header
+          let actualStart = stepsStart;
+          while (actualStart < stepsEnd && !lines[actualStart].trim()) {
+            actualStart++;
+          }
+          
+          steps = lines.slice(actualStart, stepsEnd)
+            .join('\n')
+            .trim();
         }
-        
-        steps = lines.slice(actualStart, stepsEnd)
-          .join('\n')
-          .trim();
       }
       
       // Extract description
-      let descStart = -1;
-      let descEnd = -1;
-      
-      // Find the "Description:" section (can be on same line or separate line)
-      for (let i = 0; i < lines.length; i++) {
-        const line = lines[i].trim();
-        if (/^description[\s:.-]/i.test(line)) {
-          descStart = i;
-          break;
-        }
-      }
-      
       let description = '';
-      if (descStart !== -1) {
-        // Find the end of description (next section)
-        for (let i = descStart + 1; i < lines.length; i++) {
+      if (testCase.title) {
+        // Use title if available (new format)
+        description = testCase.title;
+      } else {
+        // Fall back to parsing content for description (backwards compatibility)
+        let descStart = -1;
+        let descEnd = -1;
+        
+        // Find the "Description:" section (can be on same line or separate line)
+        for (let i = 0; i < lines.length; i++) {
           const line = lines[i].trim();
-          if (sectionHeaderRegex.test(line)) {
-            descEnd = i;
+          if (/^description[\s:.-]/i.test(line)) {
+            descStart = i;
             break;
           }
         }
         
-        if (descEnd === -1) descEnd = lines.length;
-        
-        // Get description content (remove "Description:" label)
-        const descLines = lines.slice(descStart, descEnd);
-        if (descLines.length > 0) {
-          descLines[0] = descLines[0].replace(/^description[\s:.-]*\s*/i, '');
+        if (descStart !== -1) {
+          // Find the end of description (next section)
+          for (let i = descStart + 1; i < lines.length; i++) {
+            const line = lines[i].trim();
+            if (sectionHeaderRegex.test(line)) {
+              descEnd = i;
+              break;
+            }
+          }
+          
+          if (descEnd === -1) descEnd = lines.length;
+          
+          // Get description content (remove "Description:" label)
+          const descLines = lines.slice(descStart, descEnd);
+          if (descLines.length > 0) {
+            descLines[0] = descLines[0].replace(/^description[\s:.-]*\s*/i, '');
+          }
+          
+          description = descLines
+            .filter(line => line.trim())
+            .join(' ')
+            .trim();
+        } else {
+          // If no description section, use the title (first line)
+          description = lines[0] || '';
         }
-        
-        description = descLines
-          .filter(line => line.trim())
-          .join(' ')
-          .trim();
-      } else {
-        // If no description section, use the title (first line)
-        description = lines[0] || '';
       }
       
       return {
