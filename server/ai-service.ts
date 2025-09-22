@@ -438,24 +438,54 @@ Generate test cases that thoroughly validate the requirements, processes, potent
       content = jsonMatch[0];
     }
 
-    // Parse JSON with better error handling
+    // Parse JSON with enhanced error handling
     try {
       result = JSON.parse(content);
     } catch (parseError) {
-      console.error("JSON Parse Error. Raw content:", content.substring(0, 200) + "...");
+      console.error("=== JSON PARSE ERROR DETAILS ===");
       console.error("Parse error:", parseError);
+      console.error("Content length:", content.length);
+      console.error("Raw content (first 500 chars):", content.substring(0, 500));
+      console.error("Raw content (last 200 chars):", content.length > 200 ? content.substring(content.length - 200) : content);
+      console.error("Content ends with:", content.slice(-50));
+      
+      // Check if content is empty or too short
+      if (!content || content.trim().length === 0) {
+        throw new Error("AI response was empty - no content received from the model");
+      }
+      
+      if (content.length < 10) {
+        throw new Error(`AI response too short (${content.length} chars): "${content}"`);
+      }
       
       // Try to fix common issues
       let fixedContent = content
         .replace(/[\u0000-\u001F\u007F-\u009F]/g, "") // Remove control characters
         .replace(/,(\s*[}\]])/g, "$1") // Remove trailing commas
+        .replace(/}\s*$/, "}") // Ensure proper ending
         .trim();
+      
+      // If content doesn't start with {, try to find the JSON block
+      if (!fixedContent.startsWith('{')) {
+        const jsonMatch = fixedContent.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          fixedContent = jsonMatch[0];
+          console.log("Extracted JSON block from mixed content");
+        }
+      }
       
       try {
         result = JSON.parse(fixedContent);
         console.log("Successfully parsed after cleanup");
       } catch (secondError) {
-        throw new Error(`Failed to parse AI response as JSON. Content starts with: "${content.substring(0, 100)}..."`);
+        console.error("Second parse attempt failed:", secondError);
+        console.error("Fixed content (first 200 chars):", fixedContent.substring(0, 200));
+        
+        // Check if this looks like a truncated response
+        const looksLikeTruncated = !content.endsWith('}') && !content.endsWith(']') && content.includes('{');
+        const errorType = looksLikeTruncated ? "truncated" : "malformed";
+        
+        throw new Error(`Failed to parse AI response as JSON (${errorType}). Response length: ${content.length} chars. First 100 chars: "${content.substring(0, 100)}..."`);
       }
     }
 
