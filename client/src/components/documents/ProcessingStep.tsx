@@ -41,7 +41,7 @@ export default function ProcessingStep({
   const [jobStatuses, setJobStatuses] = useState<{ [jobId: string]: JobStatus }>({});
   const [allTestCases, setAllTestCases] = useState<TestCase[]>([]);
   const [isPolling, setIsPolling] = useState(false);
-  const [aiProvider, setAiProvider] = useState<'openai' | 'gemini'>('openai');
+  const [aiProvider, setAiProvider] = useState<'openai' | 'gemini' | 'openrouter'>('openrouter');
   const [showSettings, setShowSettings] = useState(false);
   const { toast } = useToast();
 
@@ -54,7 +54,8 @@ export default function ProcessingStep({
         targetMax,
         industry,
         aiProvider,
-        aiModel: aiProvider === 'gemini' ? 'gemini-1.5-pro' : 'gpt-4-turbo-preview'
+        aiModel: aiProvider === 'gemini' ? 'gemini-1.5-pro' : 
+                 aiProvider === 'openrouter' ? 'qwen/qwen-2.5-72b-instruct:free' : 'gpt-4-turbo-preview'
       });
       return response.json();
     },
@@ -263,7 +264,7 @@ export default function ProcessingStep({
                   <Label htmlFor="ai-provider" className="text-sm font-medium">
                     AI Provider
                   </Label>
-                  <Select value={aiProvider} onValueChange={(value: 'openai' | 'gemini') => setAiProvider(value)}>
+                  <Select value={aiProvider} onValueChange={(value: 'openai' | 'gemini' | 'openrouter') => setAiProvider(value)}>
                     <SelectTrigger data-testid="select-ai-provider">
                       <SelectValue />
                     </SelectTrigger>
@@ -278,6 +279,12 @@ export default function ProcessingStep({
                         <div className="flex flex-col">
                           <span>OpenAI GPT-4 Turbo</span>
                           <span className="text-xs text-muted-foreground">Proven enterprise-grade performance</span>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="openrouter">
+                        <div className="flex flex-col">
+                          <span>Qwen 2.5 72B (OpenRouter)</span>
+                          <span className="text-xs text-muted-foreground">Free high-performance reasoning model</span>
                         </div>
                       </SelectItem>
                     </SelectContent>

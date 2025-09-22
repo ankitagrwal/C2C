@@ -1379,7 +1379,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         targetMin: z.number().min(20).default(80),
         targetMax: z.number().max(150).default(120),
         industry: z.string().optional(),
-        aiProvider: z.enum(['openai', 'gemini']).optional().default('openai'),
+        aiProvider: z.enum(['openai', 'gemini', 'openrouter']).optional().default('openrouter'),
         aiModel: z.string().optional()
       }).parse(req.body);
 
@@ -1452,8 +1452,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         document.title || 'business_document',
         `Generate between ${config.targetMin}-${config.targetMax} test cases for ${config.industry || 'general'} industry`,
         { 
-          provider: (config.aiProvider as any) || 'openai', 
-          model: config.aiModel || (config.aiProvider === 'gemini' ? 'gemini-2.0-flash' : 'gpt-4-turbo-preview')
+          provider: 'openrouter', 
+          model: config.aiModel || 'qwen/qwen-2.5-72b-instruct:free'
         }
       );
 
