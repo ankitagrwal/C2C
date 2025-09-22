@@ -1452,8 +1452,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         document.title || 'business_document',
         `Generate between ${config.targetMin}-${config.targetMax} test cases for ${config.industry || 'general'} industry`,
         { 
-          provider: 'openrouter', 
-          model: config.aiModel || 'qwen/qwen-2.5-72b-instruct:free'
+          provider: 'gemini', 
+          model: config.aiModel || 'gemini-2.5-flash'
         }
       );
 

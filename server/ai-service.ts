@@ -19,7 +19,7 @@ const geminiClient = process.env.GEMINI_API_KEY
   : null;
 
 // Smart JSON repair function to fix common syntax issues
-function smartJsonRepair(jsonStr: string): string {
+function smartJsonRepair(jsonStr: string): string | null {
   try {
     // First, try parsing as-is
     JSON.parse(jsonStr);
@@ -101,32 +101,24 @@ async function generateTestCasesWithGemini(systemPrompt: string, userPrompt: str
     const startTime = Date.now();
 
     // Use correct Gemini SDK format 
-    const response = await geminiClient.models.generateContent({
+    const model = geminiClient.getGenerativeModel({
       model: "gemini-2.5-flash",
-      config: {
-        generationConfig: {
-          temperature: 0.1,
-          topK: 16,
-          topP: 0.95,
-          maxOutputTokens: 8192,
-          responseMimeType: "application/json"
-        }
-      },
-      contents: [
-        {
-          role: 'user',
-          parts: [
-            { text: systemPrompt + "\n\n" + userPrompt }
-          ]
-        }
-      ]
+      generationConfig: {
+        temperature: 0.1,
+        topK: 16,
+        topP: 0.95,
+        maxOutputTokens: 8192,
+        responseMimeType: "application/json"
+      }
     });
+
+    const response = await model.generateContent(systemPrompt + "\n\n" + userPrompt);
 
     const endTime = Date.now();
     console.log(`Gemini API call completed in ${endTime - startTime}ms`);
 
     // Extract text from Gemini response
-    if (!response.response || !response.response.text) {
+    if (!response || !response.response) {
       console.error("Invalid Gemini response structure:", JSON.stringify(response, null, 2));
       throw new Error("Invalid response structure from Gemini API");
     }
@@ -142,7 +134,7 @@ async function generateTestCasesWithGemini(systemPrompt: string, userPrompt: str
     return {
       content,
       model: "gemini-2.5-flash",
-      usage: response.response.usageMetadata || { inputTokens: 0, outputTokens: 0, totalTokens: 0 }
+      usage: response.usageMetadata || { inputTokens: 0, outputTokens: 0, totalTokens: 0 }
     };
 
   } catch (error) {
