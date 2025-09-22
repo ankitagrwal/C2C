@@ -466,7 +466,7 @@ export async function generateTestCases(
   documentType: string,
   relevantChunks: DocumentChunk[],
   requirements?: string,
-  config: AIProviderConfig = { provider: "openrouter" },
+  config: AIProviderConfig = { provider: "gemini" },
 ): Promise<TestCaseGenerationResult> {
   const startTime = Date.now();
 
@@ -565,16 +565,55 @@ Generate test cases that thoroughly validate the requirements, processes, potent
     let result: any;
     let content: string;
 
-    // Using OpenRouter for unified AI access
-    if (!openRouter) {
-      throw new Error(
-        "OpenRouter client not initialized. Please configure OPENROUTER_API_KEY.",
-      );
+    // Using Gemini Flash as PRIMARY AI agent with OpenRouter as fallback
+    console.log(`🚀 Starting AI test case generation with ${config.provider} as primary agent...`);
+
+    if (config.provider === "gemini" && geminiClient) {
+      console.log("🧠 Gemini Flash is my primary AI brain! Let me generate those test cases...");
+      try {
+        console.log("🌟 Gemini AI is processing your document...");
+        const geminiResult = await generateTestCasesWithGemini(systemPrompt, userPrompt);
+        
+        content = geminiResult.content;
+        console.log("✅ Gemini successfully generated test cases!");
+        
+        // Parse Gemini's JSON response
+        try {
+          result = JSON.parse(content);
+          console.log("✅ Gemini JSON parsed successfully!");
+        } catch (geminiParseError) {
+          console.log("⚠️ Gemini JSON parse failed, trying repair...");
+          const repairedContent = smartJsonRepair(content);
+          if (repairedContent === null) {
+            throw new Error("Gemini JSON could not be repaired");
+          }
+          result = JSON.parse(repairedContent);
+          console.log("✅ Gemini JSON repaired and parsed successfully!");
+        }
+        
+      } catch (geminiError) {
+        console.error("❌ Gemini primary agent failed:", geminiError);
+        
+        // Fall back to OpenRouter
+        if (!openRouter) {
+          throw new Error("Gemini failed and OpenRouter fallback not available. Please configure OPENROUTER_API_KEY.");
+        }
+        
+        console.log("🔄 Primary Gemini agent hit a snag! Switching to OpenRouter backup...");
+        console.log("🤖 OpenRouter is now stepping in to handle your request...");
+        config.provider = "openrouter";
+      }
     }
 
-    // Add timeout and response size validation
-    console.log("Making AI API call to OpenRouter...");
-    const apiStartTime = Date.now();
+    // If still need to use OpenRouter (either as primary choice or fallback)
+    if (config.provider === "openrouter") {
+      if (!openRouter) {
+        throw new Error("OpenRouter client not initialized. Please configure OPENROUTER_API_KEY.");
+      }
+
+      // Add timeout and response size validation  
+      console.log("Making AI API call to OpenRouter...");
+      const apiStartTime = Date.now();
     
     // Retry logic for API failures
     let response;
