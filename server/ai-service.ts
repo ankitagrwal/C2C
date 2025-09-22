@@ -315,7 +315,7 @@ export async function generateTestCases(
     .map((chunk, index) => `Context ${index + 1}:\n${chunk.content}`)
     .join("\n\n");
 
-  const systemPrompt = `You are an expert QA engineer specializing in enterprise test case generation. Your task is to analyze business documents and generate comprehensive, actionable test cases.
+  const systemPrompt = `You are an expert QA engineer specializing in enterprise test case generation. Your task is to analyze business documents and generate comprehensive, actionable test cases with detailed step-by-step instructions and thorough edge case coverage.
 
 CRITICAL: You MUST respond with ONLY valid JSON. Do not include any explanatory text, conversational responses, or markdown formatting. Your entire response must be parseable JSON.
 
@@ -330,33 +330,76 @@ Respond with ONLY this exact JSON format (no additional text):
   "testCases": [
     {
       "title": "Clear, specific test case title",
-      "description": "Detailed description of what is being tested",
+      "description": "Detailed description of what is being tested and why it's important",
       "category": "functional|compliance|integration|edge_case",
       "priority": "high|medium|low",
-      "steps": ["Step 1", "Step 2", "Step 3"],
-      "expectedResult": "Clear expected outcome",
-      "tags": ["tag1", "tag2"]
+      "steps": [
+        "Step 1: Navigate to [specific page/section]",
+        "Step 2: Enter [specific data] in [specific field]",
+        "Step 3: Click [specific button/action]",
+        "Step 4: Verify [specific condition/result]",
+        "Step 5: [Continue with detailed actions...]"
+      ],
+      "expectedResult": "Clear, measurable expected outcome with specific criteria",
+      "tags": ["domain", "system", "risk_level", "test_type"]
     }
   ]
 }
 
-GUIDELINES:
-1. Generate 8-12 diverse test cases covering multiple scenarios
-2. Categories:
-   - functional: Core business logic and workflows
-   - compliance: Regulatory and policy adherence  
-   - integration: System interactions and data flow
-   - edge_case: Boundary conditions and error handling
-3. Priorities based on business impact and risk
-4. Steps should be specific and executable
-5. Tags should reflect business domains, systems, or risk areas
-6. Focus on scenarios that could realistically fail`;
+MANDATORY DETAILED STEP REQUIREMENTS:
+- MINIMUM 5 STEPS per test case, MAXIMUM 10 steps per test case (this is non-negotiable)
+- Each step must be specific and actionable with exact details (NEVER use vague instructions like "test the system" or "log in as a user")
+- ALWAYS include exact field names, button labels, page names, URLs, and specific data values
+- Example of GOOD steps: "Navigate to https://app.example.com/login", "Enter 'john.doe@company.com' in the Email Address field", "Click the 'Submit Payment' button", "Verify transaction ID appears in format 'TXN-XXXXXXXX'"
+- Example of BAD steps: "Log in", "Enter data", "Submit form", "Check result"
+- Break every scenario into granular, executable steps that a manual tester can follow exactly
+- Include verification/assertion steps after every 2-3 action steps
+- Specify exact expected system responses and intermediate states
+- Always include setup steps (navigation, login, data preparation) and cleanup steps when needed
+- If a test involves data entry, specify exact test data values to use
 
-  const userPrompt = `Based on the following document content, generate comprehensive test cases:
+COMPREHENSIVE EDGE CASE COVERAGE:
+Generate test cases covering these edge case categories:
+1. BOUNDARY CONDITIONS: Min/max values, empty fields, character limits
+2. INVALID INPUTS: Wrong data types, special characters, injection attempts
+3. SYSTEM LIMITS: Concurrent users, large data volumes, timeout scenarios
+4. ERROR HANDLING: Network failures, service unavailability, permission errors
+5. DATA INTEGRITY: Duplicate entries, referential integrity, data corruption
+6. WORKFLOW INTERRUPTIONS: Mid-process failures, browser refresh, session timeout
+7. SECURITY VULNERABILITIES: Unauthorized access, privilege escalation, data exposure
+8. INTEGRATION FAILURES: External service failures, API timeouts, data format mismatches
+
+ENHANCED GUIDELINES:
+1. Generate 10-15 diverse test cases with at least 30% focused on edge cases
+2. Categories (target distribution):
+   - functional: 40% - Core business logic and standard workflows
+   - edge_case: 30% - Boundary conditions, error scenarios, and failure modes
+   - compliance: 20% - Regulatory requirements, security, and policy adherence
+   - integration: 10% - System interactions, data flow, and external dependencies
+3. Priority assignment:
+   - high: Critical business functions, security risks, compliance requirements
+   - medium: Important features, data integrity, user experience
+   - low: Nice-to-have features, cosmetic issues, minor edge cases
+4. Each test case MUST have exactly 5-10 detailed, executable steps (NO EXCEPTIONS - tests with fewer than 5 steps will be rejected)
+5. Expected results must be specific and measurable
+6. Tags should include: business domain, technical system, risk level, test complexity
+7. Focus heavily on realistic failure scenarios that could impact business operations`;
+
+  const userPrompt = `Based on the following document content, generate comprehensive test cases with detailed step-by-step instructions and extensive edge case coverage:
 
 ${context}
 
-Generate test cases that thoroughly validate the requirements, processes, and potential failure scenarios described in this document.`;
+MANDATORY REQUIREMENTS:
+1. Create detailed, executable test steps for each scenario (EXACTLY 5-10 steps per test case - NO FEWER than 5 steps)
+2. Include at least 4-5 edge case test scenarios covering boundary conditions, invalid inputs, error handling, and system failures
+3. EVERY step must include specific actions, exact data inputs, field names, and verification points
+4. Focus heavily on realistic failure scenarios that could impact business operations
+5. Cover both happy path workflows and comprehensive error/edge case scenarios
+6. Include security vulnerabilities, compliance violations, and integration failure testing
+7. Use specific test data values in steps (e.g., "Enter '999999999999999' in Credit Card Number field" not "Enter invalid credit card")
+8. Include expected error messages, system responses, and intermediate states
+
+Generate test cases that thoroughly validate the requirements, processes, potential failure scenarios, boundary conditions, and error handling capabilities described in this document.`;
 
   try {
     let result: any;
@@ -369,10 +412,13 @@ Generate test cases that thoroughly validate the requirements, processes, and po
       );
     }
 
-    const prompt = `${systemPrompt}\n\n${userPrompt}`;
     const response = await openRouter.chat.completions.create({
       model: "qwen/qwen-2.5-72b-instruct:free",
-      messages: [{ role: "user", content: prompt }],
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+        { role: "assistant", content: "I understand. I will generate comprehensive test cases with exactly 5-10 detailed steps per test case and include extensive edge case coverage. I will respond with ONLY valid JSON." }
+      ],
     });
 
     content = response.choices[0].message.content || "";
@@ -412,6 +458,45 @@ Generate test cases that thoroughly validate the requirements, processes, and po
         throw new Error(`Failed to parse AI response as JSON. Content starts with: "${content.substring(0, 100)}..."`);
       }
     }
+
+    // Server-side validation to enforce requirements
+    const testCases = result.testCases || [];
+    
+    // Validate step counts (5-10 steps per test case)
+    const validatedTestCases = testCases.filter((testCase: any) => {
+      if (!testCase.steps || !Array.isArray(testCase.steps)) {
+        console.warn(`Test case "${testCase.title}" has no steps array`);
+        return false;
+      }
+      if (testCase.steps.length < 5 || testCase.steps.length > 10) {
+        console.warn(`Test case "${testCase.title}" has ${testCase.steps.length} steps, required 5-10`);
+        return false;
+      }
+      return true;
+    });
+
+    // Validate category distribution (require at least 30% edge cases for 10+ tests)
+    const categoryCount = validatedTestCases.reduce((acc: Record<string, number>, test: any) => {
+      const category = test.category || 'unknown';
+      acc[category] = (acc[category] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+    const totalTests = validatedTestCases.length;
+    const edgeCaseCount = categoryCount.edge_case || 0;
+    const edgeCasePercentage = totalTests > 0 ? (edgeCaseCount / totalTests) * 100 : 0;
+
+    console.log(`Generated ${totalTests} valid test cases with ${edgeCaseCount} edge cases (${edgeCasePercentage.toFixed(1)}%)`);
+    console.log('Category distribution:', categoryCount);
+
+    // If we don't have enough valid test cases, log a warning
+    if (totalTests < 10) {
+      console.warn(`Only generated ${totalTests} valid test cases, expected 10-15`);
+    }
+    if (edgeCasePercentage < 25 && totalTests >= 8) {
+      console.warn(`Edge case coverage is ${edgeCasePercentage.toFixed(1)}%, expected at least 25%`);
+    }
+
     const processingTime = Date.now() - startTime;
 
     // Extract metadata from document content
@@ -425,7 +510,7 @@ Generate test cases that thoroughly validate the requirements, processes, and po
     );
 
     return {
-      testCases: result.testCases || [],
+      testCases: validatedTestCases,
       metadata,
       contextUsed: relevantChunks.map(
         (chunk) =>
@@ -488,12 +573,20 @@ export async function processDocumentForTestGeneration(
     const queryEmbeddings = await generateEmbeddings([queryText]);
     const queryEmbedding = queryEmbeddings[0];
 
-    // Step 6: Find relevant chunks using RAG
-    const relevantChunks = findRelevantChunks(
+    // Step 6: Find relevant chunks using RAG (with fallback for reliable context)
+    let relevantChunks = findRelevantChunks(
       queryText,
       queryEmbedding,
       chunks,
+      5, // maxChunks
+      0.1, // Lower threshold to ensure we get chunks with random embeddings
     );
+
+    // Fallback: If no relevant chunks found, use the first few chunks to ensure context
+    if (relevantChunks.length === 0) {
+      console.log("No relevant chunks found with similarity, using first chunks as fallback");
+      relevantChunks = chunks.slice(0, Math.min(3, chunks.length));
+    }
 
     // Step 7: Generate test cases using AI
     console.log(
