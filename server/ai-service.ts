@@ -1,19 +1,20 @@
-// OpenAI removed - using only Gemini as requested
-import { GoogleGenerativeAI } from "@google/generative-ai";
+// Using OpenRouter for unified AI access with 400+ models
+import OpenAI from "openai";
 import mammoth from "mammoth";
 import { parse } from "node-html-parser";
 import crypto from "crypto";
 
-// Initialize AI clients - GEMINI ONLY as requested by user
-
-// Initialize Gemini client with proper SDK
+// Initialize OpenRouter client (OpenAI-compatible API)
 // Only initialize if API key is available
-const gemini = process.env.GEMINI_API_KEY
-  ? new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
+const openRouter = process.env.OPENROUTER_API_KEY
+  ? new OpenAI({
+      apiKey: process.env.OPENROUTER_API_KEY,
+      baseURL: "https://openrouter.ai/api/v1",
+    })
   : null;
 
-// AI Provider configuration - GEMINI ONLY
-export type AIProvider = "gemini";
+// AI Provider configuration - OpenRouter
+export type AIProvider = "openrouter";
 
 export interface AIProviderConfig {
   provider: AIProvider;
@@ -170,7 +171,7 @@ export async function generateEmbeddings(texts: string[]): Promise<number[][]> {
 export async function extractDocumentMetadata(
   documentContent: string,
   filename: string,
-  config: AIProviderConfig = { provider: "gemini" },
+  config: AIProviderConfig = { provider: "openrouter" },
 ): Promise<DocumentMetadata> {
   const prompt = `Analyze this business document and extract key metadata. Focus on identifying:
 
@@ -192,19 +193,19 @@ Respond with ONLY this exact JSON format (no additional text):
 }`;
 
   try {
-    // Using ONLY Gemini as requested by user
-    if (!gemini) {
+    // Using OpenRouter for unified AI access
+    if (!openRouter) {
       throw new Error(
-        "Gemini client not initialized. Please configure GEMINI_API_KEY.",
+        "OpenRouter client not initialized. Please configure OPENROUTER_API_KEY.",
       );
     }
 
-    const model = gemini.getGenerativeModel({
-      model: "gemini-2.5-pro",
+    const response = await openRouter.chat.completions.create({
+      model: "google/gemini-flash-1.5",
+      messages: [{ role: "user", content: prompt }],
     });
-    const response = await model.generateContent([prompt]);
 
-    let text = response.response.text() || "{}";
+    let text = response.choices[0].message.content || "{}";
     // Strip markdown code blocks and clean response
     text = text
       .replace(/```json\s*/g, "")
@@ -305,7 +306,7 @@ export async function generateTestCases(
   documentType: string,
   relevantChunks: DocumentChunk[],
   requirements?: string,
-  config: AIProviderConfig = { provider: "gemini" },
+  config: AIProviderConfig = { provider: "openrouter" },
 ): Promise<TestCaseGenerationResult> {
   const startTime = Date.now();
 
@@ -361,22 +362,22 @@ Generate test cases that thoroughly validate the requirements, processes, and po
     let result: any;
     let content: string;
 
-    // Using ONLY Gemini as requested by user
-    if (!gemini) {
+    // Using OpenRouter for unified AI access
+    if (!openRouter) {
       throw new Error(
-        "Gemini client not initialized. Please configure GEMINI_API_KEY.",
+        "OpenRouter client not initialized. Please configure OPENROUTER_API_KEY.",
       );
     }
 
-    const model = gemini.getGenerativeModel({
-      model: "gemini-2.5-pro",
-    });
     const prompt = `${systemPrompt}\n\n${userPrompt}`;
-    const response = await model.generateContent([prompt]);
+    const response = await openRouter.chat.completions.create({
+      model: "google/gemini-flash-1.5",
+      messages: [{ role: "user", content: prompt }],
+    });
 
-    content = response.response.text() || "";
+    content = response.choices[0].message.content || "";
     if (!content) {
-      throw new Error("No content in Gemini response");
+      throw new Error("No content in OpenRouter response");
     }
 
     // Strip markdown code blocks and clean response
@@ -450,7 +451,7 @@ export async function processDocumentForTestGeneration(
   documentId: string,
   documentType: string = "business_document",
   requirements?: string,
-  config: AIProviderConfig = { provider: "gemini" },
+  config: AIProviderConfig = { provider: "openrouter" },
 ): Promise<{
   extractedText: string;
   chunks: DocumentChunk[];
