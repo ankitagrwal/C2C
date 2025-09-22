@@ -19,6 +19,78 @@ const geminiClient = process.env.GEMINI_API_KEY
   ? new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY })
   : null;
 
+// Smart JSON repair function to fix common syntax issues
+function smartJsonRepair(jsonStr: string): string {
+  try {
+    // First, try parsing as-is
+    JSON.parse(jsonStr);
+    return jsonStr; // Already valid
+  } catch (error) {
+    console.log("🔧 Attempting smart JSON repair...");
+    console.log("🔧 Original error:", error);
+    console.log("🔧 Content length:", jsonStr.length);
+    
+    let repaired = jsonStr;
+    
+    // Advanced repair: Fix missing commas more aggressively
+    // Fix 1: Add missing commas between array elements
+    repaired = repaired.replace(/}\s*\n\s*{/g, '},\n{');
+    
+    // Fix 2: Add missing commas between object properties
+    repaired = repaired.replace(/"(\s*\n\s*)"([^"]+)":/g, '",\n"$2":');
+    
+    // Fix 3: Add missing commas in string arrays
+    repaired = repaired.replace(/"(\s*\n\s*)"([^"]*)"(?!\s*:)/g, '",\n"$2"');
+    
+    // Fix 4: Add missing commas after array/object transitions  
+    repaired = repaired.replace(/]\s*\n\s*{/g, '],\n{');
+    repaired = repaired.replace(/}\s*\n\s*\[/g, '},\n[');
+    
+    // Fix 5: Handle specific missing comma patterns in arrays
+    repaired = repaired.replace(/]\s*\n\s*"([^"]+)":/g, '],\n"$1":');
+    repaired = repaired.replace(/"([^"]+)"\s*\n\s*]/g, '"$1"\n]');
+    
+    // Fix 6: Add missing commas between properties and arrays
+    repaired = repaired.replace(/"([^"]*)"(\s*\n\s*)\[/g, '"$1",$2[');
+    
+    // Fix 7: Close unclosed arrays/objects at the end
+    const openBraces = (repaired.match(/{/g) || []).length;
+    const closeBraces = (repaired.match(/}/g) || []).length;
+    const openBrackets = (repaired.match(/\[/g) || []).length;
+    const closeBrackets = (repaired.match(/]/g) || []).length;
+    
+    // Add missing closing braces
+    for (let i = 0; i < openBraces - closeBraces; i++) {
+      repaired += '}';
+    }
+    
+    // Add missing closing brackets  
+    for (let i = 0; i < openBrackets - closeBrackets; i++) {
+      repaired += ']';
+    }
+    
+    // Fix 8: Clean up multiple commas and trailing commas
+    repaired = repaired.replace(/,+/g, ',');
+    repaired = repaired.replace(/,(\s*[}\]])/g, '$1');
+    
+    // Fix 9: Handle specific array element comma issues
+    repaired = repaired.replace(/"\s*\n\s*"([^"]*)"(?=\s*[,\]])/g, '",\n"$1"');
+    
+    console.log("🔧 JSON repair completed, checking validity...");
+    
+    try {
+      JSON.parse(repaired);
+      console.log("✅ Smart JSON repair successful!");
+      return repaired;
+    } catch (repairError) {
+      console.log("⚠️ Smart repair couldn't fix all issues");
+      console.log("⚠️ Repair error:", repairError);
+      console.log("⚠️ Repaired content sample:", repaired.substring(0, 300));
+      return null; // Return null to trigger Gemini fallback
+    }
+  }
+}
+
 // Gemini API function for test case generation
 async function generateTestCasesWithGemini(systemPrompt: string, userPrompt: string) {
   if (!geminiClient) {
@@ -671,12 +743,45 @@ Generate test cases that thoroughly validate the requirements, processes, potent
         throw new Error(`AI response too short (${content.length} chars): "${content}"`);
       }
       
-      // Try to fix common issues
+      // Smart JSON repair - fix common syntax issues
       let fixedContent = content
         .replace(/[\u0000-\u001F\u007F-\u009F]/g, "") // Remove control characters
         .replace(/,(\s*[}\]])/g, "$1") // Remove trailing commas
         .replace(/}\s*$/, "}") // Ensure proper ending
         .trim();
+
+      // Advanced JSON repair for missing commas and brackets
+      const repairedContent = smartJsonRepair(fixedContent);
+      if (repairedContent === null) {
+        // Smart repair failed completely, trigger Gemini fallback immediately
+        console.log("🔄 Smart JSON repair failed, switching to Gemini fallback...");
+        if (config.provider === "openrouter" && geminiClient) {
+          console.log("🤖 My primary AI friend is totally confused! Let me wake up my backup genius...");
+          
+          try {
+            console.log("🌟 Gemini AI is now handling your request...");
+            const geminiResult = await generateTestCasesWithGemini(systemPrompt, userPrompt);
+            
+            content = geminiResult.content;
+            console.log("✅ Gemini successfully generated test cases!");
+            config.provider = "gemini";
+            
+            // Parse Gemini's structured JSON response
+            result = JSON.parse(content);
+            console.log("✅ Gemini JSON parsed successfully!");
+            
+          } catch (geminiError) {
+            console.error("❌ Gemini fallback also failed:", geminiError);
+            const openRouterError = `OpenRouter JSON parse error: ${parseError ? parseError.message : 'Unknown parse error'}`;
+            const geminiErrorMsg = geminiError instanceof Error ? geminiError.message : "Unknown Gemini error";
+            throw new Error(`Both AI agents failed. ${openRouterError}. Gemini: ${geminiErrorMsg}`);
+          }
+        } else {
+          throw new Error(`Smart JSON repair failed and no fallback available. Original error: ${parseError ? parseError.message : 'Unknown parse error'}`);
+        }
+      } else {
+        fixedContent = repairedContent;
+      }
       
       // If content doesn't start with {, try to find the JSON block
       if (!fixedContent.startsWith('{')) {
