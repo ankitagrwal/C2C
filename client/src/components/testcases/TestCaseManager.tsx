@@ -652,6 +652,7 @@ export default function TestCaseManager() {
               <TableRow>
                 <TableHead>Test Case</TableHead>
                 <TableHead>Category</TableHead>
+                <TableHead>Test Steps</TableHead>
                 <TableHead>Customer</TableHead>
                 <TableHead>Document</TableHead>
                 <TableHead>Status</TableHead>
@@ -680,6 +681,14 @@ export default function TestCaseManager() {
                     <Badge variant="outline" className="text-xs">
                       {testCase.category}
                     </Badge>
+                  </TableCell>
+                  <TableCell className="max-w-xs">
+                    <div className="text-xs text-muted-foreground" data-testid={`text-steps-${testCase.id}`}>
+                      {testCase.steps && Array.isArray(testCase.steps) && testCase.steps.length > 0 
+                        ? `${testCase.steps.length} steps: ${testCase.steps[0].substring(0, 50)}${testCase.steps[0].length > 50 ? '...' : ''}`
+                        : 'No steps defined'
+                      }
+                    </div>
                   </TableCell>
                   <TableCell className="text-sm">
                     {testCase.customerName}
