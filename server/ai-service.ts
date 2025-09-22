@@ -200,7 +200,7 @@ Respond with ONLY this exact JSON format (no additional text):
     }
 
     const model = gemini.getGenerativeModel({
-      model: "gemini-2.0-flash",
+      model: "gemini-2.5-pro",
     });
     const response = await model.generateContent([prompt]);
 
@@ -369,7 +369,7 @@ Generate test cases that thoroughly validate the requirements, processes, and po
     }
 
     const model = gemini.getGenerativeModel({
-      model: "gemini-2.0-flash",
+      model: "gemini-2.5-pro",
     });
     const prompt = `${systemPrompt}\n\n${userPrompt}`;
     const response = await model.generateContent([prompt]);
