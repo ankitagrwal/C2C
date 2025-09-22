@@ -1,5 +1,6 @@
-// Using OpenRouter for unified AI access with 400+ models
+// Using OpenRouter for unified AI access with 400+ models and Gemini as fallback
 import OpenAI from "openai";
+import { GoogleGenAI } from "@google/genai";
 import mammoth from "mammoth";
 import { parse } from "node-html-parser";
 import crypto from "crypto";
@@ -13,8 +14,90 @@ const openRouter = process.env.OPENROUTER_API_KEY
     })
   : null;
 
-// AI Provider configuration - OpenRouter
-export type AIProvider = "openrouter";
+// Initialize Gemini client for fallback
+const geminiClient = process.env.GEMINI_API_KEY
+  ? new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY })
+  : null;
+
+// Gemini API function for test case generation
+async function generateTestCasesWithGemini(systemPrompt: string, userPrompt: string) {
+  if (!geminiClient) {
+    throw new Error("Gemini client not initialized");
+  }
+
+  try {
+    console.log("Making API call to Gemini 2.5 Flash...");
+    const startTime = Date.now();
+
+    const response = await geminiClient.models.generateContent({
+      model: "gemini-2.5-flash",
+      config: {
+        systemInstruction: systemPrompt,
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: "object",
+          properties: {
+            testCases: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  title: { type: "string" },
+                  description: { type: "string" },
+                  steps: {
+                    type: "array",
+                    items: { type: "string" }
+                  },
+                  expectedResult: { type: "string" },
+                  category: { type: "string" },
+                  priority: { type: "string" },
+                  tags: {
+                    type: "array",
+                    items: { type: "string" }
+                  }
+                },
+                required: ["title", "description", "steps", "expectedResult", "category", "priority"]
+              }
+            },
+            processingTime: { type: "number" },
+            contextUsed: {
+              type: "array",
+              items: { type: "string" }
+            }
+          },
+          required: ["testCases", "processingTime", "contextUsed"]
+        },
+        maxOutputTokens: 8000,
+        temperature: 0.1
+      },
+      contents: userPrompt,
+    });
+
+    const duration = Date.now() - startTime;
+    console.log(`Gemini API call completed in ${duration}ms`);
+
+    const content = response.text;
+    if (!content) {
+      throw new Error("Empty response from Gemini");
+    }
+
+    console.log("Gemini Response details:");
+    console.log("- Content length:", content.length);
+    console.log("- Response received successfully");
+
+    return {
+      content: content,
+      duration: duration
+    };
+
+  } catch (error) {
+    console.error("Gemini API call failed:", error);
+    throw new Error(`Gemini API error: ${error instanceof Error ? error.message : "Unknown error"}`);
+  }
+}
+
+// AI Provider configuration - OpenRouter with Gemini fallback
+export type AIProvider = "openrouter" | "gemini";
 
 export interface AIProviderConfig {
   provider: AIProvider;
@@ -483,39 +566,67 @@ Generate test cases that thoroughly validate the requirements, processes, potent
     }
     
     if (!response) {
-      // All retries failed, throw the last error
-      const errorMessage = lastError instanceof Error ? lastError.message : "Unknown API error";
-      throw new Error(`AI API call failed after ${maxRetries} attempts: ${errorMessage}`);
+      // All OpenRouter retries failed, try Gemini fallback
+      console.log("🤖 Primary AI agent seems to be taking a nap! Let me wake up my trusty backup assistant...");
+      console.log("🔄 Switching to Gemini (our secondary AI agent) to continue processing...");
+      
+      if (!geminiClient) {
+        const errorMessage = lastError instanceof Error ? lastError.message : "Unknown API error";
+        throw new Error(`Primary AI failed and Gemini fallback not available. OpenRouter error: ${errorMessage}`);
+      }
+      
+      try {
+        console.log("🌟 Gemini AI is now handling your request...");
+        const geminiResult = await generateTestCasesWithGemini(systemPrompt, userPrompt);
+        
+        // Process Gemini result same way as OpenRouter
+        content = geminiResult.content;
+        console.log("✅ Gemini successfully generated test cases!");
+        
+        // Gemini returns structured JSON directly, so we can skip some validation
+        if (!content || content.length < 50) {
+          throw new Error("Gemini returned invalid or too short response");
+        }
+        
+      } catch (geminiError) {
+        console.error("❌ Gemini fallback also failed:", geminiError);
+        const openRouterError = lastError instanceof Error ? lastError.message : "Unknown API error";
+        const geminiErrorMsg = geminiError instanceof Error ? geminiError.message : "Unknown Gemini error";
+        throw new Error(`Both AI agents failed. OpenRouter: ${openRouterError}. Gemini: ${geminiErrorMsg}`);
+      }
+    } else {
+
+      const apiDuration = Date.now() - apiStartTime;
+      console.log(`OpenRouter AI API call completed in ${apiDuration}ms`);
+      
+      // Process OpenRouter response
+      // Validate API response structure
+      if (!response || !response.choices || response.choices.length === 0) {
+        throw new Error("Invalid API response structure - no choices returned");
+      }
+
+      content = response.choices[0].message?.content || "";
+      
+      // Log response details for debugging
+      console.log("OpenRouter Response details:");
+      console.log("- Content length:", content.length);
+      console.log("- Finish reason:", response.choices[0].finish_reason);
+      console.log("- Usage:", response.usage);
+      
+      if (!content) {
+        throw new Error("No content in OpenRouter response - empty message content");
+      }
+      
+      if (content.length < 50) {
+        throw new Error(`AI response suspiciously short (${content.length} chars): "${content}"`);
+      }
+      
+      // Check if response was truncated
+      if (response.choices[0].finish_reason === 'length') {
+        console.warn("⚠️  AI response may have been truncated due to max_tokens limit");
+      }
     }
 
-    const apiDuration = Date.now() - apiStartTime;
-    console.log(`AI API call completed in ${apiDuration}ms`);
-
-    // Validate API response structure
-    if (!response || !response.choices || response.choices.length === 0) {
-      throw new Error("Invalid API response structure - no choices returned");
-    }
-
-    content = response.choices[0].message?.content || "";
-    
-    // Log response details for debugging
-    console.log("AI Response details:");
-    console.log("- Content length:", content.length);
-    console.log("- Finish reason:", response.choices[0].finish_reason);
-    console.log("- Usage:", response.usage);
-    
-    if (!content) {
-      throw new Error("No content in OpenRouter response - empty message content");
-    }
-    
-    if (content.length < 50) {
-      throw new Error(`AI response suspiciously short (${content.length} chars): "${content}"`);
-    }
-    
-    // Check if response was truncated
-    if (response.choices[0].finish_reason === 'length') {
-      console.warn("⚠️  AI response may have been truncated due to max_tokens limit");
-    }
 
     // Strip markdown code blocks and clean response
     content = content
