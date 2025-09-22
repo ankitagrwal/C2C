@@ -650,9 +650,11 @@ Generate test cases that thoroughly validate the requirements, processes, potent
     }
 
     // Parse JSON with enhanced error handling
+    let parseError: Error | null = null;
     try {
       result = JSON.parse(content);
-    } catch (parseError) {
+    } catch (firstParseError) {
+      parseError = firstParseError instanceof Error ? firstParseError : new Error('Unknown parse error');
       console.error("=== JSON PARSE ERROR DETAILS ===");
       console.error("Parse error:", parseError);
       console.error("Content length:", content.length);
@@ -711,7 +713,7 @@ Generate test cases that thoroughly validate the requirements, processes, potent
             
           } catch (geminiError) {
             console.error("❌ Gemini fallback also failed:", geminiError);
-            const openRouterError = `OpenRouter JSON parse error: ${parseError instanceof Error ? parseError.message : 'Unknown parse error'}`;
+            const openRouterError = `OpenRouter JSON parse error: ${parseError ? parseError.message : 'Unknown parse error'}`;
             const geminiErrorMsg = geminiError instanceof Error ? geminiError.message : "Unknown Gemini error";
             throw new Error(`Both AI agents failed. ${openRouterError}. Gemini: ${geminiErrorMsg}`);
           }
