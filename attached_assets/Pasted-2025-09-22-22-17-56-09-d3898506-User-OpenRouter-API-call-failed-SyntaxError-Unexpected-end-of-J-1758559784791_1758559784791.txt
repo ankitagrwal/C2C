@@ -1,0 +1,108 @@
+2025-09-22 22:17:56.09
+d3898506
+User
+OpenRouter API call failed: SyntaxError: Unexpected end of JSON input
+2025-09-22 22:17:56.09
+d3898506
+User
+at JSON.parse ()
+2025-09-22 22:17:56.09
+d3898506
+User
+at parseJSONFromBytes (node:internal/deps/undici/undici:5738:19)
+2025-09-22 22:17:56.09
+d3898506
+User
+at successSteps (node:internal/deps/undici/undici:5719:27)
+2025-09-22 22:17:56.09
+d3898506
+User
+at fullyReadBody (node:internal/deps/undici/undici:4609:9)
+2025-09-22 22:17:56.09
+d3898506
+User
+at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+2025-09-22 22:17:56.09
+d3898506
+User
+at async consumeBody (node:internal/deps/undici/undici:5728:7)
+2025-09-22 22:17:56.09
+d3898506
+User
+at async file:///home/runner/workspace/node_modules/openai/internal/parse.mjs:27:26
+2025-09-22 22:17:56.09
+d3898506
+User
+at async APIPromise.defaultParseResponse [as parseResponse] (file:///home/runner/workspace/node_modules/openai/internal/parse.mjs:6:18)
+2025-09-22 22:17:56.09
+d3898506
+User
+at async generateTestCases (file:///home/runner/workspace/dist/index.js:690:18)
+2025-09-22 22:17:56.09
+d3898506
+User
+at async processDocumentForTestGeneration (file:///home/runner/workspace/dist/index.js:852:24)
+2025-09-22 22:17:56.09
+d3898506
+User
+at async processDocumentInBackground (file:///home/runner/workspace/dist/index.js:2180:24)
+2025-09-22 22:17:56.19
+d3898506
+User
+Error generating test cases: Error: AI API call failed: Unexpected end of JSON input
+2025-09-22 22:17:56.19
+d3898506
+User
+at generateTestCases (file:///home/runner/workspace/dist/index.js:704:13)
+2025-09-22 22:17:56.19
+d3898506
+User
+at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+2025-09-22 22:17:56.19
+d3898506
+User
+at async processDocumentForTestGeneration (file:///home/runner/workspace/dist/index.js:852:24)
+2025-09-22 22:17:56.19
+d3898506
+User
+at async processDocumentInBackground (file:///home/runner/workspace/dist/index.js:2180:24)
+2025-09-22 22:17:56.19
+d3898506
+User
+Error processing document MRG Employee Handbook - Rudy's Florida 9.23 - Copy.docx: Error: Failed to generate test cases: AI API call failed: Unexpected end of JSON input
+2025-09-22 22:17:56.19
+d3898506
+User
+at generateTestCases (file:///home/runner/workspace/dist/index.js:810:11)
+2025-09-22 22:17:56.19
+d3898506
+User
+at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+2025-09-22 22:17:56.19
+d3898506
+User
+at async processDocumentForTestGeneration (file:///home/runner/workspace/dist/index.js:852:24)
+2025-09-22 22:17:56.19
+d3898506
+User
+at async processDocumentInBackground (file:///home/runner/workspace/dist/index.js:2180:24)
+2025-09-22 22:17:56.19
+d3898506
+User
+Background processing failed for job dbbc1a81-b54d-4be5-b3ef-34fe661cc40a: Error: Failed to generate test cases: AI API call failed: Unexpected end of JSON input
+2025-09-22 22:17:56.19
+d3898506
+User
+at generateTestCases (file:///home/runner/workspace/dist/index.js:810:11)
+2025-09-22 22:17:56.19
+d3898506
+User
+at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+2025-09-22 22:17:56.19
+d3898506
+User
+at async processDocumentForTestGeneration (file:///home/runner/workspace/dist/index.js:852:24)
+2025-09-22 22:17:56.19
+d3898506
+User
+at async processDocumentInBackground (file:///home/runner/workspace/dist/index.js:2180:24)

@@ -7,6 +7,7 @@ import InternalToolsManager from "../tools/InternalToolsManager";
 import DocumentsWizard from "@/components/documents/DocumentsWizard";
 import TestCaseManager from "../testcases/TestCaseManager";
 import ReportsPage from "@/pages/ReportsPage";
+import AIProcessingMonitor from "../ai/AIProcessingMonitor";
 import { insertUserSchema } from "@shared/schema";
 import { z } from "zod";
 
@@ -177,12 +178,7 @@ export default function Clause2CaseApp() {
         </Route>
         <Route path="/test-cases" component={TestCaseManager} />
         <Route path="/reports" component={ReportsPage} />
-        <Route path="/ai-processing">
-          <div className="text-center py-12">
-            <h2 className="text-2xl font-semibold mb-2">AI Processing</h2>
-            <p className="text-muted-foreground">AI operations monitoring coming soon...</p>
-          </div>
-        </Route>
+        <Route path="/ai-processing" component={AIProcessingMonitor} />
         {/* 404 fallback */}
         <Route>
           <div className="text-center py-12">

@@ -416,21 +416,76 @@ Generate test cases that thoroughly validate the requirements, processes, potent
     console.log("Making AI API call to OpenRouter...");
     const apiStartTime = Date.now();
     
+    // Retry logic for API failures
     let response;
-    try {
-      response = await openRouter.chat.completions.create({
-        model: "qwen/qwen-2.5-72b-instruct:free",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-          { role: "assistant", content: "I understand. I will generate comprehensive test cases with exactly 5-10 detailed steps per test case and include extensive edge case coverage. I will respond with ONLY valid JSON." }
-        ],
-        max_tokens: 16000, // Set reasonable limit to prevent truncation
-        temperature: 0.1, // Lower temperature for more consistent JSON output
-      });
-    } catch (apiError) {
-      console.error("OpenRouter API call failed:", apiError);
-      throw new Error(`AI API call failed: ${apiError instanceof Error ? apiError.message : "Unknown API error"}`);
+    let lastError;
+    const maxRetries = 3;
+    const baseDelay = 1000; // 1 second
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        console.log(`API attempt ${attempt}/${maxRetries}...`);
+        
+        // Create an AbortController for timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout
+        
+        response = await openRouter.chat.completions.create({
+          model: "qwen/qwen-2.5-72b-instruct:free",
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userPrompt },
+            { role: "assistant", content: "I understand. I will generate comprehensive test cases with exactly 5-10 detailed steps per test case and include extensive edge case coverage. I will respond with ONLY valid JSON." }
+          ],
+          max_tokens: 16000, // Set reasonable limit to prevent truncation
+          temperature: 0.1, // Lower temperature for more consistent JSON output
+        }, {
+          signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
+        console.log(`API call succeeded on attempt ${attempt}`);
+        break; // Success, exit retry loop
+        
+      } catch (apiError) {
+        lastError = apiError;
+        
+        // Log detailed error information
+        console.error(`API attempt ${attempt} failed:`, apiError);
+        
+        if (apiError instanceof Error) {
+          console.error("Error name:", apiError.name);
+          console.error("Error message:", apiError.message);
+          console.error("Error stack:", apiError.stack);
+        }
+        
+        // Check if this is an abort (timeout) error
+        if (apiError instanceof Error && apiError.name === 'AbortError') {
+          console.error("API call timed out after 60 seconds");
+        }
+        
+        // Check if this is a JSON parsing error at HTTP level
+        if (apiError instanceof Error && apiError.message.includes('JSON input')) {
+          console.error("HTTP-level JSON parsing error detected");
+        }
+        
+        // If this is the last attempt, don't retry
+        if (attempt === maxRetries) {
+          console.error(`All ${maxRetries} API attempts failed`);
+          break;
+        }
+        
+        // Wait before retrying (exponential backoff)
+        const delay = baseDelay * Math.pow(2, attempt - 1);
+        console.log(`Waiting ${delay}ms before retry...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+    
+    if (!response) {
+      // All retries failed, throw the last error
+      const errorMessage = lastError instanceof Error ? lastError.message : "Unknown API error";
+      throw new Error(`AI API call failed after ${maxRetries} attempts: ${errorMessage}`);
     }
 
     const apiDuration = Date.now() - apiStartTime;
