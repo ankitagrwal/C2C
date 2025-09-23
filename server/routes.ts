@@ -1106,17 +1106,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.get('/api/processing-jobs/:id', requireAuth, async (req, res) => {
+    console.log(`🔍 DEBUG: GET /api/processing-jobs/${req.params.id} - Request received`);
+    console.log(`🔍 DEBUG: Request timestamp: ${new Date().toISOString()}`);
+    console.log(`🔍 DEBUG: Request headers:`, req.headers['user-agent']);
+    
     try {
       validateParams(uuidParamSchema, req.params);
+      console.log(`🔍 DEBUG: Job ID validation passed for: ${req.params.id}`);
+      
       const job = await storage.getProcessingJob(req.params.id);
+      console.log(`🔍 DEBUG: Storage query result:`, {
+        found: !!job,
+        status: job?.status || 'N/A',
+        progress: job?.progress || 'N/A'
+      });
+      
       if (!job) {
+        console.log(`❌ DEBUG: Job ${req.params.id} not found in storage`);
         return res.status(404).json({ 
           error: 'Processing job not found',
           code: 'NOT_FOUND' 
         });
       }
+      
+      console.log(`✅ DEBUG: Returning job data for ${req.params.id}:`, {
+        status: job.status,
+        progress: job.progress,
+        hasResult: !!job.result
+      });
       res.json(job);
     } catch (error) {
+      console.log(`❌ DEBUG: Error in /api/processing-jobs/${req.params.id}:`, error);
       if (error instanceof z.ZodError) {
         return res.status(400).json({ 
           error: 'Invalid job ID format', 
@@ -1507,11 +1527,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Get job status with progress tracking
   app.get('/api/jobs/:id', requireAuth, async (req: AuthenticatedRequest, res) => {
+    console.log(`🔄 DEBUG: GET /api/jobs/${req.params.id} - Request received`);
+    console.log(`🔄 DEBUG: Request timestamp: ${new Date().toISOString()}`);
+    console.log(`🔄 DEBUG: User agent:`, req.headers['user-agent']);
+    console.log(`🔄 DEBUG: This might be causing the "loop" issue!`);
+    
     try {
       const jobId = z.string().uuid().parse(req.params.id);
+      console.log(`🔄 DEBUG: Job ID validation passed for: ${jobId}`);
+      
       const job = await storage.getProcessingJob(jobId);
+      console.log(`🔄 DEBUG: Job lookup result:`, {
+        found: !!job,
+        status: job?.status || 'N/A',
+        progress: job?.progress || 'N/A',
+        hasResult: !!job?.result
+      });
       
       if (!job) {
+        console.log(`❌ DEBUG: Job ${jobId} not found in storage`);
         return res.status(404).json({ 
           error: 'Job not found',
           code: 'NOT_FOUND' 
@@ -1520,14 +1554,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Simulate progress for demo (in production, this would be real progress)
       if (job.status === 'pending') {
+        console.log(`🔄 DEBUG: Job ${jobId} is pending, updating to processing...`);
         await storage.updateProcessingJob(jobId, {
           status: 'processing',
           progress: Math.floor(Math.random() * 30) + 10 // 10-40% initial progress
         });
+        console.log(`🔄 DEBUG: Job ${jobId} status updated to processing`);
       }
 
+      console.log(`✅ DEBUG: Returning job data for ${jobId}:`, {
+        status: job.status,
+        progress: job.progress,
+        hasResult: !!job.result,
+        resultKeys: job.result ? Object.keys(job.result) : []
+      });
       res.json(job);
     } catch (error) {
+      console.log(`❌ DEBUG: Error in /api/jobs/${req.params.id}:`, error);
       if (error instanceof z.ZodError) {
         return res.status(400).json({ 
           error: 'Invalid job ID format', 

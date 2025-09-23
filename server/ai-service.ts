@@ -96,16 +96,54 @@ async function generateTestCasesWithGemini(systemPrompt: string, userPrompt: str
     throw new Error("Gemini client not initialized");
   }
 
+  // 🔍 COMPREHENSIVE LOGGING FOR DEBUGGING
+  console.log("=".repeat(80));
+  console.log("🚀 GEMINI API CALL DEBUG START");
+  console.log("=".repeat(80));
+  console.log("📊 Environment Check:");
+  console.log("- API Key present:", !!process.env.GEMINI_API_KEY);
+  console.log("- API Key first 10 chars:", process.env.GEMINI_API_KEY?.substring(0, 10) + "...");
+  console.log("- System prompt length:", systemPrompt.length, "chars");
+  console.log("- User prompt length:", userPrompt.length, "chars");
+  console.log("- Total content length:", (systemPrompt + "\n\n" + userPrompt).length, "chars");
+  console.log("- Node.js version:", process.version);
+  console.log("- Platform:", process.platform);
+
+  // 🔍 NETWORK CONNECTIVITY TEST
+  console.log("🌐 Testing network connectivity to Gemini API...");
   try {
-    console.log("Making API call to Gemini 2.5 Flash...");
+    console.log("🌐 Testing basic HTTPS connectivity...");
+    const testResponse = await fetch("https://generativelanguage.googleapis.com/v1beta/models", {
+      method: "GET",
+      headers: {
+        "X-Goog-Api-Key": process.env.GEMINI_API_KEY || ""
+      }
+    });
+    console.log("✅ Network test response status:", testResponse.status);
+    console.log("✅ Network test response headers:", Object.fromEntries(testResponse.headers.entries()));
+  } catch (networkError) {
+    console.log("❌ Network connectivity test failed:", networkError);
+    console.log("❌ This suggests the Node.js environment cannot reach Gemini API");
+  }
+
+  try {
+    console.log("🔄 Making API call to Gemini 2.5 Flash...");
+    
     const startTime = Date.now();
 
     // Add timeout protection (same as OpenRouter)
     const controller = new AbortController();
     const timeoutId = setTimeout(() => {
       console.log("⚠️ Gemini API call timeout after 90 seconds, aborting...");
+      console.log("⚠️ This suggests a network connectivity issue within Node.js environment");
       controller.abort();
     }, 90000); // 90 seconds for Gemini (longer than OpenRouter since it's primary)
+
+    console.log("📡 About to call geminiClient.models.generateContent...");
+    console.log("📡 Request config:", {
+      model: "gemini-2.5-flash",
+      contentLength: (systemPrompt + "\n\n" + userPrompt).length
+    });
 
     // Use NEW Google GenAI SDK format 
     const response = await geminiClient.models.generateContent({
@@ -115,7 +153,8 @@ async function generateTestCasesWithGemini(systemPrompt: string, userPrompt: str
 
     clearTimeout(timeoutId);
     const endTime = Date.now();
-    console.log(`Gemini API call completed in ${endTime - startTime}ms`);
+    console.log("✅ Gemini API call completed successfully!");
+    console.log(`⏱️ Response time: ${endTime - startTime}ms`);
 
     // Extract text from NEW SDK response
     if (!response || !response.text) {
@@ -138,7 +177,39 @@ async function generateTestCasesWithGemini(systemPrompt: string, userPrompt: str
     };
 
   } catch (error) {
-    console.error("Gemini API call failed:", error);
+    console.log("=".repeat(80));
+    console.log("❌ GEMINI API CALL ERROR DEBUG");
+    console.log("=".repeat(80));
+    console.log("🔍 Error type:", error?.constructor?.name || 'Unknown');
+    console.log("🔍 Error message:", error instanceof Error ? error.message : String(error));
+    console.log("🔍 Full error object:", JSON.stringify(error, null, 2));
+    
+    if (error instanceof Error) {
+      console.log("🔍 Error stack:", error.stack);
+      
+      // Check for specific network error patterns
+      if (error.message.includes('fetch failed')) {
+        console.log("🚨 NETWORK ISSUE DETECTED:");
+        console.log("- This is a Node.js fetch network error");
+        console.log("- Gemini API may be blocked by firewall/proxy");
+        console.log("- Environment may not allow external HTTPS calls");
+        console.log("- Consider checking network configuration");
+      }
+      
+      if (error.message.includes('timeout')) {
+        console.log("🚨 TIMEOUT ISSUE DETECTED:");
+        console.log("- API call took longer than 90 seconds");
+        console.log("- Network may be slow or unstable");
+        console.log("- Consider using smaller content or different model");
+      }
+    }
+    
+    console.log("🔍 Network diagnostics:");
+    console.log("- Process platform:", process.platform);
+    console.log("- Node.js version:", process.version);
+    console.log("- Environment:", process.env.NODE_ENV);
+    console.log("=".repeat(80));
+    
     throw new Error(`Gemini API error: ${error instanceof Error ? error.message : "Unknown error"}`);
   }
 }
