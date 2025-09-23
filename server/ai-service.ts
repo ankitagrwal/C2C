@@ -90,7 +90,7 @@ function smartJsonRepair(jsonStr: string): string | null {
   }
 }
 
-// Gemini API function for test case generation
+// Gemini API function for test case generation (NEW SDK format)
 async function generateTestCasesWithGemini(systemPrompt: string, userPrompt: string) {
   if (!geminiClient) {
     throw new Error("Gemini client not initialized");
@@ -100,30 +100,22 @@ async function generateTestCasesWithGemini(systemPrompt: string, userPrompt: str
     console.log("Making API call to Gemini 2.5 Flash...");
     const startTime = Date.now();
 
-    // Use correct Gemini SDK format 
-    const model = geminiClient.getGenerativeModel({
+    // Use NEW Google GenAI SDK format 
+    const response = await geminiClient.models.generateContent({
       model: "gemini-2.5-flash",
-      generationConfig: {
-        temperature: 0.1,
-        topK: 16,
-        topP: 0.95,
-        maxOutputTokens: 8192,
-        responseMimeType: "application/json"
-      }
+      contents: systemPrompt + "\n\n" + userPrompt
     });
-
-    const response = await model.generateContent(systemPrompt + "\n\n" + userPrompt);
 
     const endTime = Date.now();
     console.log(`Gemini API call completed in ${endTime - startTime}ms`);
 
-    // Extract text from Gemini response
-    if (!response || !response.response) {
+    // Extract text from NEW SDK response
+    if (!response || !response.text) {
       console.error("Invalid Gemini response structure:", JSON.stringify(response, null, 2));
       throw new Error("Invalid response structure from Gemini API");
     }
 
-    const content = response.response.text().trim();
+    const content = response.text.trim();
     
     if (!content || content.length < 50) {
       throw new Error(`Gemini response too short: ${content.length} characters`);
