@@ -154,6 +154,7 @@ export interface DocumentChunk {
 
 export interface AIProviderConfig {
   provider: "gemini" | "openrouter";
+  model?: string; // Optional model specification
 }
 
 export interface TestCaseGenerationResult {
