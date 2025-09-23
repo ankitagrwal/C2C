@@ -1,0 +1,104 @@
+2025-09-23 12:34:29.29
+ad3d894a
+User
+at AbortController.abort (node:internal/abort_controller:391:18)
+2025-09-23 12:34:29.29
+ad3d894a
+User
+at EventTarget. (file:///home/runner/workspace/node_modules/openai/client.mjs:351:63)
+2025-09-23 12:34:29.29
+ad3d894a
+User
+at [nodejs.internal.kHybridDispatch] (node:internal/event_target:831:20)
+2025-09-23 12:34:29.29
+ad3d894a
+User
+at EventTarget.dispatchEvent (node:internal/event_target:766:26)
+2025-09-23 12:34:29.29
+ad3d894a
+User
+at abortSignal (node:internal/abort_controller:370:10)
+2025-09-23 12:34:29.29
+ad3d894a
+User
+at AbortController.abort (node:internal/abort_controller:392:5)
+2025-09-23 12:34:29.29
+ad3d894a
+User
+at Timeout._onTimeout (file:///home/runner/workspace/dist/index.js:644:57)
+2025-09-23 12:34:29.29
+ad3d894a
+User
+at listOnTimeout (node:internal/timers:581:17)
+2025-09-23 12:34:29.29
+ad3d894a
+User
+at process.processTimers (node:internal/timers:519:7)
+2025-09-23 12:34:29.29
+ad3d894a
+User
+All 3 API attempts failed
+2025-09-23 12:34:29.29
+ad3d894a
+User
+Error generating test cases: Error: OpenRouter (fallback agent) also failed. Error: This operation was aborted
+2025-09-23 12:34:29.29
+ad3d894a
+User
+at generateTestCases (file:///home/runner/workspace/dist/index.js:675:15)
+2025-09-23 12:34:29.29
+ad3d894a
+User
+at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+2025-09-23 12:34:29.29
+ad3d894a
+User
+at async processDocumentForTestGeneration (file:///home/runner/workspace/dist/index.js:799:24)
+2025-09-23 12:34:29.29
+ad3d894a
+User
+at async processDocumentInBackground (file:///home/runner/workspace/dist/index.js:2141:24)
+2025-09-23 12:34:29.29
+ad3d894a
+User
+Error processing document: Error: Failed to generate test cases: OpenRouter (fallback agent) also failed. Error: This operation was aborted
+2025-09-23 12:34:29.29
+ad3d894a
+User
+at generateTestCases (file:///home/runner/workspace/dist/index.js:734:11)
+2025-09-23 12:34:29.29
+ad3d894a
+User
+at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+2025-09-23 12:34:29.29
+ad3d894a
+User
+at async processDocumentForTestGeneration (file:///home/runner/workspace/dist/index.js:799:24)
+2025-09-23 12:34:29.29
+ad3d894a
+User
+at async processDocumentInBackground (file:///home/runner/workspace/dist/index.js:2141:24)
+2025-09-23 12:34:29.29
+ad3d894a
+User
+Background processing failed for job 7b738383-e329-468a-acfa-643a72235152: Error: Failed to process document: Failed to generate test cases: OpenRouter (fallback agent) also failed. Error: This operation was aborted
+2025-09-23 12:34:29.29
+ad3d894a
+User
+at processDocumentForTestGeneration (file:///home/runner/workspace/dist/index.js:813:11)
+2025-09-23 12:34:29.29
+ad3d894a
+User
+at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+2025-09-23 12:34:29.29
+ad3d894a
+User
+at async processDocumentInBackground (file:///home/runner/workspace/dist/index.js:2141:24)
+2025-09-23 12:34:29.35
+ad3d894a
+User
+7:04:29 AM [express] GET /api/jobs/7b738383-e329-468a-acfa-643a72235152 304 in 97ms :: {"id":"7b7383…
+2025-09-23 12:34:31.82
+ad3d894a
+User
+7:04:31 AM [express] GET /api/jobs/7b738383-e329-468a-acfa-643a72235152 200 in 91ms :: {"id":"7b7383…

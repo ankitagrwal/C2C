@@ -90,7 +90,7 @@ function smartJsonRepair(jsonStr: string): string | null {
   }
 }
 
-// Gemini API function for test case generation (NEW SDK format)
+// Gemini API function for test case generation (NEW SDK format) with timeout protection
 async function generateTestCasesWithGemini(systemPrompt: string, userPrompt: string) {
   if (!geminiClient) {
     throw new Error("Gemini client not initialized");
@@ -100,12 +100,20 @@ async function generateTestCasesWithGemini(systemPrompt: string, userPrompt: str
     console.log("Making API call to Gemini 2.5 Flash...");
     const startTime = Date.now();
 
+    // Add timeout protection (same as OpenRouter)
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => {
+      console.log("⚠️ Gemini API call timeout after 90 seconds, aborting...");
+      controller.abort();
+    }, 90000); // 90 seconds for Gemini (longer than OpenRouter since it's primary)
+
     // Use NEW Google GenAI SDK format 
     const response = await geminiClient.models.generateContent({
       model: "gemini-2.5-flash",
       contents: systemPrompt + "\n\n" + userPrompt
     });
 
+    clearTimeout(timeoutId);
     const endTime = Date.now();
     console.log(`Gemini API call completed in ${endTime - startTime}ms`);
 
