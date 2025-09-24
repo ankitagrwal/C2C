@@ -11,18 +11,53 @@ const geminiClient = process.env.GEMINI_API_KEY
   ? new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
   : null;
 
+// Strip markdown code fences from Gemini responses
+function stripMarkdownCodeFences(content: string): string {
+  // Remove ```json...``` or ```...``` wrappers that Gemini often adds
+  let cleaned = content.trim();
+  
+  // Pattern 1: ```json\n{...}\n```
+  if (cleaned.startsWith('```json\n') && cleaned.endsWith('\n```')) {
+    cleaned = cleaned.slice(8, -4); // Remove ```json\n and \n```
+  }
+  // Pattern 2: ```\n{...}\n```
+  else if (cleaned.startsWith('```\n') && cleaned.endsWith('\n```')) {
+    cleaned = cleaned.slice(4, -4); // Remove ```\n and \n```
+  }
+  // Pattern 3: ```json{...}```
+  else if (cleaned.startsWith('```json') && cleaned.endsWith('```')) {
+    const jsonStart = cleaned.indexOf('{');
+    if (jsonStart !== -1) {
+      cleaned = cleaned.slice(jsonStart, -3); // Remove ```json prefix and ``` suffix
+    }
+  }
+  // Pattern 4: ```{...}```
+  else if (cleaned.startsWith('```') && cleaned.endsWith('```')) {
+    const jsonStart = cleaned.indexOf('{');
+    if (jsonStart !== -1) {
+      cleaned = cleaned.slice(jsonStart, -3); // Remove ``` prefix and ``` suffix
+    }
+  }
+  
+  return cleaned.trim();
+}
+
 // Smart JSON repair function to fix common syntax issues
 function smartJsonRepair(jsonStr: string): string | null {
   try {
-    // First, try parsing as-is
-    JSON.parse(jsonStr);
-    return jsonStr; // Already valid
+    // First, strip any markdown code fences that Gemini might add
+    const strippedJson = stripMarkdownCodeFences(jsonStr);
+    
+    // Try parsing the cleaned JSON
+    JSON.parse(strippedJson);
+    return strippedJson; // Already valid after stripping
   } catch (error) {
     console.log("🔧 Attempting smart JSON repair...");
     console.log("🔧 Original error:", error);
     console.log("🔧 Content length:", jsonStr.length);
     
-    let repaired = jsonStr;
+    // Start with stripped content for repair
+    let repaired = stripMarkdownCodeFences(jsonStr);
     
     // Advanced repair: Fix missing commas more aggressively
     // Fix 1: Add missing commas between array elements
