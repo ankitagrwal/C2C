@@ -5,6 +5,7 @@ import { parse } from "node-html-parser";
 import crypto from "crypto";
 import fs from "fs";
 import path from "path";
+// PDF parsing will be dynamically imported when needed
 
 // Initialize Gemini client
 const geminiClient = process.env.GEMINI_API_KEY
@@ -534,6 +535,39 @@ async function extractTextFromFile(buffer: Buffer, filename: string): Promise<st
     case 'docx':
       const result = await mammoth.extractRawText({ buffer });
       return result.value;
+    case 'pdf':
+      try {
+        const pdfParse = (await import('pdf-parse')).default;
+        console.log(`📄 Processing PDF file: ${filename}, buffer size: ${buffer.length} bytes`);
+        
+        const pdfData = await pdfParse(buffer);
+        
+        if (!pdfData.text || pdfData.text.trim().length === 0) {
+          console.log(`⚠️ PDF parsing succeeded but extracted no text content from ${filename}`);
+          return "This document appears to be a PDF but contains no extractable text content.";
+        }
+        
+        console.log(`✅ PDF text extraction successful: ${pdfData.text.length} characters extracted from ${filename}`);
+        return pdfData.text;
+        
+      } catch (pdfError) {
+        console.error(`❌ PDF parsing failed for ${filename}:`, pdfError);
+        
+        // Provide helpful error information
+        if (pdfError instanceof Error) {
+          if (pdfError.message.includes('Invalid PDF structure') || pdfError.message.includes('bad XRef')) {
+            console.log(`📋 PDF format issue detected - possibly corrupted or non-standard PDF format`);
+            return "This PDF file appears to have formatting issues that prevent text extraction. The document may be corrupted or use a non-standard PDF format.";
+          } else if (pdfError.message.includes('Password') || pdfError.message.includes('encrypted')) {
+            console.log(`🔒 PDF appears to be password protected or encrypted`);
+            return "This PDF file appears to be password protected or encrypted and cannot be processed.";
+          }
+        }
+        
+        // Generic PDF processing error
+        console.log(`🔧 Falling back to generic error message for PDF processing failure`);
+        return "This PDF file could not be processed due to technical limitations. Please try converting it to a .txt or .docx format.";
+      }
     default:
       throw new Error(`Unsupported file type: ${extension}`);
   }
