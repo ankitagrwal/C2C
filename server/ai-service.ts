@@ -1,19 +1,10 @@
-// Using Gemini Flash as PRIMARY and OpenRouter as SECONDARY AI agent
-import OpenAI from "openai";
+// Using Gemini Flash as the AI agent
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import mammoth from "mammoth";
 import { parse } from "node-html-parser";
 import crypto from "crypto";
 
-// Initialize OpenRouter client (secondary agent)
-const openRouter = process.env.OPENROUTER_API_KEY
-  ? new OpenAI({
-      apiKey: process.env.OPENROUTER_API_KEY,
-      baseURL: "https://openrouter.ai/api/v1",
-    })
-  : null;
-
-// Initialize Gemini client for primary agent
+// Initialize Gemini client
 const geminiClient = process.env.GEMINI_API_KEY
   ? new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
   : null;
@@ -131,13 +122,13 @@ async function generateTestCasesWithGemini(systemPrompt: string, userPrompt: str
     
     const startTime = Date.now();
 
-    // Add timeout protection (same as OpenRouter)
+    // Add timeout protection
     const controller = new AbortController();
     const timeoutId = setTimeout(() => {
       console.log("⚠️ Gemini API call timeout after 90 seconds, aborting...");
       console.log("⚠️ This suggests a network connectivity issue within Node.js environment");
       controller.abort();
-    }, 90000); // 90 seconds for Gemini (longer than OpenRouter since it's primary)
+    }, 90000); // 90 seconds for Gemini
 
     console.log("📡 About to call geminiClient.getGenerativeModel() and model.generateContent()...");
     console.log("📡 Request config:", {
@@ -223,7 +214,7 @@ export interface DocumentChunk {
 }
 
 export interface AIProviderConfig {
-  provider: "gemini" | "openrouter";
+  provider: "gemini";
   model?: string; // Optional model specification
 }
 
@@ -377,121 +368,8 @@ Generate test cases that thoroughly validate the requirements, processes, potent
         }
         
       } catch (geminiError) {
-        console.error("❌ Gemini primary agent failed:", geminiError);
-        
-        // SECONDARY: Fall back to OpenRouter
-        if (!openRouter) {
-          throw new Error("Gemini failed and OpenRouter fallback not available. Please configure OPENROUTER_API_KEY.");
-        }
-        
-        console.log("🔄 Primary Gemini agent hit a snag! Switching to OpenRouter backup...");
-        console.log("🤖 OpenRouter is now stepping in to handle your request...");
-        config.provider = "openrouter";
-      }
-    }
-
-    // Use OpenRouter (either as primary choice or fallback)
-    if (config.provider === "openrouter") {
-      if (!openRouter) {
-        throw new Error("OpenRouter client not initialized. Please configure OPENROUTER_API_KEY.");
-      }
-
-      console.log("Making AI API call to OpenRouter...");
-      const apiStartTime = Date.now();
-      
-      // Retry logic for API failures
-      let response;
-      let lastError;
-      const maxRetries = 3;
-      const baseDelay = 1000;
-      
-      for (let attempt = 1; attempt <= maxRetries; attempt++) {
-        try {
-          console.log(`API attempt ${attempt}/${maxRetries}...`);
-          
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 60000);
-          
-          response = await openRouter.chat.completions.create({
-            model: "qwen/qwen-2.5-72b-instruct:free",
-            messages: [
-              { role: "system", content: systemPrompt },
-              { role: "user", content: userPrompt },
-              { role: "assistant", content: "I understand. I will generate comprehensive test cases with exactly 5-10 detailed steps per test case and include extensive edge case coverage. I will respond with ONLY valid JSON." }
-            ],
-            max_tokens: 8000,
-            temperature: 0.1,
-            response_format: { type: "json_object" }
-          }, {
-            signal: controller.signal
-          });
-          
-          clearTimeout(timeoutId);
-          console.log(`API call succeeded on attempt ${attempt}`);
-          break;
-          
-        } catch (apiError) {
-          lastError = apiError;
-          console.error(`API attempt ${attempt} failed:`, apiError);
-          
-          if (attempt === maxRetries) {
-            console.error(`All ${maxRetries} API attempts failed`);
-            break;
-          }
-          
-          const delay = baseDelay * Math.pow(2, attempt - 1);
-          console.log(`Waiting ${delay}ms before retry...`);
-          await new Promise(resolve => setTimeout(resolve, delay));
-        }
-      }
-    
-      if (!response) {
-        const errorMessage = lastError instanceof Error ? lastError.message : "Unknown API error";
-        throw new Error(`OpenRouter (fallback agent) also failed. Error: ${errorMessage}`);
-      }
-
-      const apiDuration = Date.now() - apiStartTime;
-      console.log(`OpenRouter AI API call completed in ${apiDuration}ms`);
-      
-      // Process OpenRouter response
-      if (!response || !response.choices || response.choices.length === 0) {
-        throw new Error("Invalid API response structure - no choices returned");
-      }
-
-      content = response.choices[0].message?.content || "";
-      
-      if (!content || content.length < 50) {
-        throw new Error(`AI response too short (${content.length} chars): "${content}"`);
-      }
-
-      // Clean response
-      content = content
-        .replace(/```json\s*/g, "")
-        .replace(/```\s*$/g, "")
-        .trim();
-
-      const jsonMatch = content.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        content = jsonMatch[0];
-      }
-
-      // Parse JSON with repair
-      try {
-        result = JSON.parse(content);
-      } catch (parseError) {
-        console.error("OpenRouter JSON parse error:", parseError);
-        
-        const repairedContent = smartJsonRepair(content);
-        if (repairedContent === null) {
-          throw new Error(`OpenRouter JSON could not be repaired. Parse error: ${parseError}`);
-        }
-        
-        try {
-          result = JSON.parse(repairedContent);
-          console.log("Successfully parsed OpenRouter JSON after repair");
-        } catch (secondError) {
-          throw new Error(`OpenRouter JSON repair failed. Original error: ${parseError}`);
-        }
+        console.error("❌ Gemini agent failed:", geminiError);
+        throw new Error(`Failed to generate test cases: ${geminiError instanceof Error ? geminiError.message : "Unknown error"}`);
       }
     }
 
