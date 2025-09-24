@@ -139,7 +139,7 @@ async function generateTestCasesWithGemini(systemPrompt: string, userPrompt: str
       controller.abort();
     }, 90000); // 90 seconds for Gemini (longer than OpenRouter since it's primary)
 
-    console.log("📡 About to call geminiClient.models.generateContent...");
+    console.log("📡 About to call geminiClient.getGenerativeModel() and model.generateContent()...");
     console.log("📡 Request config:", {
       model: "gemini-2.5-flash",
       contentLength: (systemPrompt + "\n\n" + userPrompt).length

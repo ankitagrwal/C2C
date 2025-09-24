@@ -1426,8 +1426,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         jobs.push(job);
 
-        // Start AI processing immediately (don't wait)
-        processDocumentInBackground(job.id, documentId, document, validatedData);
+        // Start AI processing immediately (with proper error handling)
+        processDocumentInBackground(job.id, documentId, document, validatedData).catch(error => {
+          console.error(`Background processing failed for job ${job.id}:`, error);
+        });
       }
 
       res.status(201).json({
