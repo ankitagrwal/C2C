@@ -331,11 +331,11 @@ Respond with ONLY this exact JSON format (no additional text):
       "category": "functional|compliance|integration|edge_case",
       "priority": "high|medium|low",
       "steps": [
-        "Step 1: Navigate to [specific page/section]",
-        "Step 2: Enter [specific data] in [specific field]",
-        "Step 3: Click [specific button/action]",
-        "Step 4: Verify [specific condition/result]",
-        "Step 5: [Continue with detailed actions...]"
+        "Navigate to [specific page/section]",
+        "Enter [specific data] in [specific field]",
+        "Click [specific button/action]",
+        "Verify [specific condition/result]",
+        "[Continue with detailed actions...]"
       ],
       "expectedResult": "Clear, measurable expected outcome with specific criteria",
       "tags": ["domain", "system", "risk_level", "test_type"]
