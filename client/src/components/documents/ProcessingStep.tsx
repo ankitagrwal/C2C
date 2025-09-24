@@ -41,6 +41,7 @@ export default function ProcessingStep({
   const [jobStatuses, setJobStatuses] = useState<{ [jobId: string]: JobStatus }>({});
   const [allTestCases, setAllTestCases] = useState<TestCase[]>([]);
   const [isPolling, setIsPolling] = useState(false);
+  // Force aiProvider to always be 'gemini' (no other options available)
   const [aiProvider, setAiProvider] = useState<'gemini'>('gemini');
   const [showSettings, setShowSettings] = useState(false);
   const { toast } = useToast();
@@ -53,7 +54,7 @@ export default function ProcessingStep({
         targetMin,
         targetMax,
         industry,
-        aiProvider,
+        aiProvider: 'gemini', // Force to gemini only
         aiModel: 'gemini-2.5-flash'
       });
       return response.json();
