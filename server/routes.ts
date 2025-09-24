@@ -1399,7 +1399,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         targetMin: z.number().min(20).default(80),
         targetMax: z.number().max(150).default(120),
         industry: z.string().optional(),
-        aiProvider: z.enum(['openai', 'gemini', 'openrouter']).optional().default('openrouter'),
+        aiProvider: z.enum(['gemini']).optional().default('gemini'),
         aiModel: z.string().optional()
       }).parse(req.body);
 

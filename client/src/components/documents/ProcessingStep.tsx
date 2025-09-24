@@ -41,7 +41,7 @@ export default function ProcessingStep({
   const [jobStatuses, setJobStatuses] = useState<{ [jobId: string]: JobStatus }>({});
   const [allTestCases, setAllTestCases] = useState<TestCase[]>([]);
   const [isPolling, setIsPolling] = useState(false);
-  const [aiProvider, setAiProvider] = useState<'openai' | 'gemini' | 'openrouter'>('openrouter');
+  const [aiProvider, setAiProvider] = useState<'gemini'>('gemini');
   const [showSettings, setShowSettings] = useState(false);
   const { toast } = useToast();
 
@@ -54,8 +54,7 @@ export default function ProcessingStep({
         targetMax,
         industry,
         aiProvider,
-        aiModel: aiProvider === 'gemini' ? 'gemini-1.5-pro' : 
-                 aiProvider === 'openrouter' ? 'qwen/qwen-2.5-72b-instruct:free' : 'gpt-4-turbo-preview'
+        aiModel: 'gemini-2.5-flash'
       });
       return response.json();
     },
@@ -264,33 +263,21 @@ export default function ProcessingStep({
                   <Label htmlFor="ai-provider" className="text-sm font-medium">
                     AI Provider
                   </Label>
-                  <Select value={aiProvider} onValueChange={(value: 'openai' | 'gemini' | 'openrouter') => setAiProvider(value)}>
+                  <Select value={aiProvider} onValueChange={(value: 'gemini') => setAiProvider(value)}>
                     <SelectTrigger data-testid="select-ai-provider">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="gemini">
                         <div className="flex flex-col">
-                          <span>Google Gemini 1.5 Pro</span>
-                          <span className="text-xs text-muted-foreground">Latest multimodal model, excellent reasoning</span>
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="openai">
-                        <div className="flex flex-col">
-                          <span>OpenAI GPT-4 Turbo</span>
-                          <span className="text-xs text-muted-foreground">Proven enterprise-grade performance</span>
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="openrouter">
-                        <div className="flex flex-col">
-                          <span>Qwen 2.5 72B (OpenRouter)</span>
-                          <span className="text-xs text-muted-foreground">Free high-performance reasoning model</span>
+                          <span>Google Gemini 2.5 Flash</span>
+                          <span className="text-xs text-muted-foreground">Latest high-speed model with excellent reasoning</span>
                         </div>
                       </SelectItem>
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-muted-foreground">
-                    Choose your preferred AI provider for test case generation. Both providers will also extract customer metadata automatically.
+                    Using Google Gemini 2.5 Flash for fast and reliable test case generation with automatic customer metadata extraction.
                   </p>
                 </div>
               </CardContent>
