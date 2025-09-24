@@ -532,6 +532,7 @@ async function extractTextFromFile(buffer: Buffer, filename: string): Promise<st
   switch (extension) {
     case 'txt':
       return buffer.toString('utf8');
+    case 'doc':
     case 'docx':
       const result = await mammoth.extractRawText({ buffer });
       return result.value;
