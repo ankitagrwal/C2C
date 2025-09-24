@@ -1,6 +1,6 @@
 // Using Gemini Flash as PRIMARY and OpenRouter as SECONDARY AI agent
 import OpenAI from "openai";
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import mammoth from "mammoth";
 import { parse } from "node-html-parser";
 import crypto from "crypto";
@@ -15,7 +15,7 @@ const openRouter = process.env.OPENROUTER_API_KEY
 
 // Initialize Gemini client for primary agent
 const geminiClient = process.env.GEMINI_API_KEY
-  ? new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY })
+  ? new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
   : null;
 
 // Smart JSON repair function to fix common syntax issues
@@ -145,24 +145,23 @@ async function generateTestCasesWithGemini(systemPrompt: string, userPrompt: str
       contentLength: (systemPrompt + "\n\n" + userPrompt).length
     });
 
-    // Use NEW Google GenAI SDK format 
-    const response = await geminiClient.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: systemPrompt + "\n\n" + userPrompt
-    });
+    // Use CORRECT Google GenAI SDK format 
+    const model = geminiClient.getGenerativeModel({ model: "gemini-2.5-flash" });
+    const result = await model.generateContent(systemPrompt + "\n\n" + userPrompt);
 
     clearTimeout(timeoutId);
     const endTime = Date.now();
     console.log("✅ Gemini API call completed successfully!");
     console.log(`⏱️ Response time: ${endTime - startTime}ms`);
 
-    // Extract text from NEW SDK response
-    if (!response || !response.text) {
+    // Extract text from CORRECT SDK response
+    const response = result.response;
+    if (!response || !response.text()) {
       console.error("Invalid Gemini response structure:", JSON.stringify(response, null, 2));
       throw new Error("Invalid response structure from Gemini API");
     }
 
-    const content = response.text.trim();
+    const content = response.text().trim();
     
     if (!content || content.length < 50) {
       throw new Error(`Gemini response too short: ${content.length} characters`);
@@ -173,7 +172,7 @@ async function generateTestCasesWithGemini(systemPrompt: string, userPrompt: str
     return {
       content,
       model: "gemini-2.5-flash",
-      usage: response.usageMetadata || { inputTokens: 0, outputTokens: 0, totalTokens: 0 }
+      usage: result.response.usageMetadata || { inputTokens: 0, outputTokens: 0, totalTokens: 0 }
     };
 
   } catch (error) {
