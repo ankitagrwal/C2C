@@ -131,6 +131,8 @@ export class DatabaseStorage implements IStorage {
         tags: testCases.tags,
         category: testCases.category,
         priority: testCases.priority,
+        severity: testCases.severity,
+        persona: testCases.persona,
         source: testCases.source,
         confidenceScore: testCases.confidenceScore,
         contextUsed: testCases.contextUsed,

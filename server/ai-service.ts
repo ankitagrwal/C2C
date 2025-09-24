@@ -330,6 +330,8 @@ Respond with ONLY this exact JSON format (no additional text):
       "description": "Detailed description of what is being tested and why it's important",
       "category": "functional|compliance|integration|edge_case",
       "priority": "high|medium|low",
+      "severity": "Low|Medium|High",
+      "persona": "Hourly Employee|HR Admin|Salaried Employee|System Admin|Payroll Admin|Hourly Manager|Salaried Manager|Other",
       "steps": [
         "Navigate to [specific page/section]",
         "Enter [specific data] in [specific field]",
@@ -377,10 +379,25 @@ ENHANCED GUIDELINES:
    - high: Critical business functions, security risks, compliance requirements
    - medium: Important features, data integrity, user experience
    - low: Nice-to-have features, cosmetic issues, minor edge cases
-4. Each test case MUST have exactly 5-10 detailed, executable steps (NO EXCEPTIONS - tests with fewer than 5 steps will be rejected)
-5. Expected results must be specific and measurable
-6. Tags should include: business domain, technical system, risk level, test complexity
-7. Focus heavily on realistic failure scenarios that could impact business operations`;
+4. Severity assignment (impact on business operations):
+   - High: Critical failures that halt business operations or cause data loss
+   - Medium: Significant issues affecting functionality but with workarounds
+   - Low: Minor issues with minimal business impact
+5. Persona assignment (who would execute this test):
+   - Hourly Employee: Front-line workers, field staff
+   - HR Admin: Human resources personnel managing employee data
+   - Salaried Employee: Office workers, managers, professionals
+   - System Admin: IT administrators managing system configurations
+   - Payroll Admin: Personnel processing payroll and financial data
+   - Hourly Manager: Supervisors of hourly employees
+   - Salaried Manager: Management personnel overseeing operations
+   - Other: Special roles or generic users
+6. Each test case MUST have exactly 5-10 detailed, executable steps (NO EXCEPTIONS - tests with fewer than 5 steps will be rejected)
+7. Expected results must be specific and measurable
+8. Tags should include: business domain, technical system, risk level, test complexity
+9. Assign appropriate persona based on who would realistically execute this test in an organization
+10. Set severity based on business impact: High for critical systems, Medium for important functions, Low for minor issues
+11. Focus heavily on realistic failure scenarios that could impact business operations`;
 
   const userPrompt = `Based on the following document content, generate comprehensive test cases with detailed step-by-step instructions and extensive edge case coverage:
 

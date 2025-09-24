@@ -34,6 +34,9 @@ type TestCase = {
   steps?: string[];
   expectedResult?: string;
   category: string;
+  priority: string;
+  severity: string;
+  persona: string;
   source: string;
   confidenceScore: number | null;
   contextUsed: string | null;
@@ -43,75 +46,13 @@ type TestCase = {
   createdAt: string;
 };
 
-const mockTestCases: TestCase[] = [
-  {
-    id: '1',
-    content: 'Verify that software license allows maximum 500 concurrent users as specified in Section 3.2',
-    category: 'Functional Tests',
-    source: 'generated',
-    confidenceScore: 0.94,
-    contextUsed: 'Software licensing terms and conditions for enterprise deployment. Maximum 500 concurrent users',
-    executionStatus: 'ready',
-    documentName: 'Software License Agreement 2024.pdf',
-    customerName: 'TechCorp Inc',
-    createdAt: '2024-09-10T10:30:00Z'
-  },
-  {
-    id: '2',
-    content: 'Test remote work policy compliance when employee requests more than 3 days per week',
-    category: 'Compliance Tests',
-    source: 'generated',
-    confidenceScore: 0.87,
-    contextUsed: 'Remote work policy allows up to 3 days per week working from home',
-    executionStatus: 'in_progress',
-    documentName: 'Employee Handbook Q3.md',
-    customerName: 'TechCorp Inc',
-    createdAt: '2024-09-10T11:15:00Z'
-  },
-  {
-    id: '3',
-    content: 'Validate HIPAA compliance when unauthorized healthcare provider attempts to access patient records',
-    category: 'Compliance Tests',
-    source: 'generated',
-    confidenceScore: 0.96,
-    contextUsed: 'Only authorized healthcare providers can access patient records under HIPAA guidelines',
-    executionStatus: 'complete',
-    documentName: 'HIPAA Compliance Manual.pdf',
-    customerName: 'HealthCare Partners',
-    createdAt: '2024-09-10T09:45:00Z'
-  },
-  {
-    id: '4',
-    content: 'Test edge case: What happens when license expires during active user session?',
-    category: 'Edge Cases',
-    source: 'manual',
-    confidenceScore: null,
-    contextUsed: null,
-    executionStatus: 'ready',
-    documentName: 'Software License Agreement 2024.pdf',
-    customerName: 'TechCorp Inc',
-    createdAt: '2024-09-10T14:20:00Z'
-  },
-  {
-    id: '5',
-    content: 'Verify API integration handles user authentication correctly with external HR systems',
-    category: 'Integration Tests',
-    source: 'generated',
-    confidenceScore: 0.89,
-    contextUsed: 'System integration with external HR portal for user authentication and authorization',
-    executionStatus: 'ready',
-    documentName: 'HR System Integration Guide.pdf',
-    customerName: 'Education Institute',
-    createdAt: '2024-09-10T12:00:00Z'
-  }
-];
 
 const categories = ['All Categories', 'Functional Tests', 'Compliance Tests', 'Edge Cases', 'Integration Tests'];
 const statuses = ['All Statuses', 'ready', 'in_progress', 'complete'];
 const sources = ['All Sources', 'generated', 'manual', 'uploaded'];
 
 interface TestCaseDetailDialogProps {
-  testCase: typeof mockTestCases[0];
+  testCase: TestCase;
   onSave: (id: string, updates: any) => void;
 }
 
@@ -167,6 +108,39 @@ function TestCaseDetailDialog({ testCase, onSave }: TestCaseDetailDialogProps) {
             </div>
           </div>
         )}
+
+        <div className="grid grid-cols-3 gap-4">
+          <div>
+            <Label>Priority</Label>
+            <div className="p-2 bg-muted/50 rounded-md text-sm" data-testid="text-priority">
+              <Badge 
+                variant={testCase.priority === 'high' ? 'destructive' : testCase.priority === 'low' ? 'secondary' : 'default'}
+                className="capitalize"
+              >
+                {testCase.priority || 'medium'}
+              </Badge>
+            </div>
+          </div>
+          <div>
+            <Label>Severity</Label>
+            <div className="p-2 bg-muted/50 rounded-md text-sm" data-testid="text-severity">
+              <Badge 
+                variant={testCase.severity === 'High' ? 'destructive' : testCase.severity === 'Low' ? 'secondary' : 'default'}
+                className="capitalize"
+              >
+                {testCase.severity || 'Medium'}
+              </Badge>
+            </div>
+          </div>
+          <div>
+            <Label>Persona</Label>
+            <div className="p-2 bg-muted/50 rounded-md text-sm" data-testid="text-persona">
+              <Badge variant="outline" className="text-xs">
+                {testCase.persona || 'Other'}
+              </Badge>
+            </div>
+          </div>
+        </div>
 
         <div>
           <Label htmlFor="content">Additional Content</Label>
@@ -652,6 +626,9 @@ export default function TestCaseManager() {
               <TableRow>
                 <TableHead>Test Case</TableHead>
                 <TableHead>Category</TableHead>
+                <TableHead>Priority</TableHead>
+                <TableHead>Severity</TableHead>
+                <TableHead>Persona</TableHead>
                 <TableHead>Test Steps</TableHead>
                 <TableHead>Customer</TableHead>
                 <TableHead>Document</TableHead>
@@ -680,6 +657,21 @@ export default function TestCaseManager() {
                   <TableCell>
                     <Badge variant="outline" className="text-xs">
                       {testCase.category}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={testCase.priority === 'high' ? 'destructive' : testCase.priority === 'medium' ? 'default' : 'secondary'} className="text-xs">
+                      {testCase.priority}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={testCase.severity === 'High' ? 'destructive' : testCase.severity === 'Medium' ? 'default' : 'secondary'} className="text-xs">
+                      {testCase.severity}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="outline" className="text-xs">
+                      {testCase.persona}
                     </Badge>
                   </TableCell>
                   <TableCell className="max-w-xs">
