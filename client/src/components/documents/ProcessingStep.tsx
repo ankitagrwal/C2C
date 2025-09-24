@@ -126,7 +126,7 @@ export default function ProcessingStep({
       return mergedStatuses;
     },
     enabled: isPolling && processingJobs.length > 0,
-    refetchInterval: isPolling ? 2000 : false, // Poll every 2 seconds
+    refetchInterval: isPolling ? 5000 : false, // Poll every 5 seconds (reduced from 2s to prevent spam)
     refetchOnWindowFocus: false,
   });
 
