@@ -114,8 +114,21 @@ function TestCaseDetailDialog({ testCase, onSave }: TestCaseDetailDialogProps) {
             <Label>Priority</Label>
             <div className="p-2 bg-muted/50 rounded-md text-sm" data-testid="text-priority">
               <Badge 
-                variant={testCase.priority === 'high' ? 'destructive' : testCase.priority === 'low' ? 'secondary' : 'default'}
-                className="capitalize"
+                variant="outline"
+                className="capitalize no-default-hover-elevate"
+                style={{
+                  backgroundColor: testCase.priority === 'high' 
+                    ? '#dc2626' 
+                    : testCase.priority === 'low'
+                      ? '#6b7280'
+                      : '#2563eb',
+                  color: '#ffffff',
+                  borderColor: testCase.priority === 'high' 
+                    ? '#dc2626' 
+                    : testCase.priority === 'low'
+                      ? '#6b7280'
+                      : '#2563eb'
+                }}
               >
                 {testCase.priority || 'medium'}
               </Badge>
@@ -125,8 +138,21 @@ function TestCaseDetailDialog({ testCase, onSave }: TestCaseDetailDialogProps) {
             <Label>Severity</Label>
             <div className="p-2 bg-muted/50 rounded-md text-sm" data-testid="text-severity">
               <Badge 
-                variant={testCase.severity === 'High' ? 'destructive' : testCase.severity === 'Low' ? 'secondary' : 'default'}
-                className="capitalize"
+                variant="outline"
+                className="capitalize no-default-hover-elevate"
+                style={{
+                  backgroundColor: testCase.severity?.toLowerCase() === 'high' 
+                    ? '#dc2626' 
+                    : testCase.severity?.toLowerCase() === 'low'
+                      ? '#6b7280'
+                      : '#2563eb',
+                  color: '#ffffff',
+                  borderColor: testCase.severity?.toLowerCase() === 'high' 
+                    ? '#dc2626' 
+                    : testCase.severity?.toLowerCase() === 'low'
+                      ? '#6b7280'
+                      : '#2563eb'
+                }}
               >
                 {testCase.severity || 'Medium'}
               </Badge>
@@ -621,28 +647,29 @@ export default function TestCaseManager() {
           <CardDescription>Generated and manual test cases from uploaded documents</CardDescription>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Test Case</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead>Priority</TableHead>
-                <TableHead>Severity</TableHead>
-                <TableHead>Persona</TableHead>
-                <TableHead>Test Steps</TableHead>
-                <TableHead>Customer</TableHead>
-                <TableHead>Document</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="min-w-80">Test Case</TableHead>
+                  <TableHead className="min-w-28">Category</TableHead>
+                  <TableHead className="min-w-20">Priority</TableHead>
+                  <TableHead className="min-w-20">Severity</TableHead>
+                  <TableHead className="min-w-24">Persona</TableHead>
+                  <TableHead className="min-w-32">Test Steps</TableHead>
+                  <TableHead className="min-w-32">Customer</TableHead>
+                  <TableHead className="min-w-40">Document</TableHead>
+                  <TableHead className="min-w-20">Status</TableHead>
+                  <TableHead className="min-w-24">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
             <TableBody>
               {filteredTestCases.map((testCase: TestCase) => (
                 <TableRow key={testCase.id} data-testid={`row-testcase-${testCase.id}`}>
-                  <TableCell className="max-w-md">
+                  <TableCell className="max-w-80">
                     <div className="space-y-1">
-                      <p className="font-medium text-sm">{testCase.content}</p>
-                      <div className="flex items-center space-x-2">
+                      <p className="font-medium text-sm leading-tight">{testCase.content}</p>
+                      <div className="flex items-center space-x-2 flex-wrap">
                         <Badge variant="secondary" className="text-xs capitalize">
                           {testCase.source}
                         </Badge>
@@ -655,47 +682,90 @@ export default function TestCaseManager() {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Badge variant="outline" className="text-xs">
+                    <Badge variant="outline" className="text-xs capitalize whitespace-nowrap">
                       {testCase.category}
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <Badge variant={testCase.priority === 'high' ? 'destructive' : testCase.priority === 'medium' ? 'default' : 'secondary'} className="text-xs">
+                    <div 
+                      className="inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-semibold whitespace-nowrap capitalize"
+                      style={{
+                        backgroundColor: testCase.priority === 'high' 
+                          ? '#dc2626' 
+                          : testCase.priority === 'low'
+                            ? '#6b7280'
+                            : '#2563eb',
+                        color: '#ffffff',
+                        borderColor: testCase.priority === 'high' 
+                          ? '#dc2626' 
+                          : testCase.priority === 'low'
+                            ? '#6b7280'
+                            : '#2563eb'
+                      }}
+                      data-priority={testCase.priority}
+                      data-bgcolor={testCase.priority === 'high' 
+                        ? '#dc2626' 
+                        : testCase.priority === 'low'
+                          ? '#6b7280'
+                          : '#2563eb'}
+                    >
                       {testCase.priority}
-                    </Badge>
+                    </div>
                   </TableCell>
                   <TableCell>
-                    <Badge variant={testCase.severity === 'High' ? 'destructive' : testCase.severity === 'Medium' ? 'default' : 'secondary'} className="text-xs">
+                    <div 
+                      className="inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-semibold whitespace-nowrap capitalize"
+                      style={{
+                        backgroundColor: testCase.severity?.toLowerCase() === 'high' 
+                          ? '#dc2626' 
+                          : testCase.severity?.toLowerCase() === 'low'
+                            ? '#6b7280'
+                            : '#2563eb',
+                        color: '#ffffff',
+                        borderColor: testCase.severity?.toLowerCase() === 'high' 
+                          ? '#dc2626' 
+                          : testCase.severity?.toLowerCase() === 'low'
+                            ? '#6b7280'
+                            : '#2563eb'
+                      }}
+                      data-severity={testCase.severity}
+                      data-bgcolor={testCase.severity?.toLowerCase() === 'high' 
+                        ? '#dc2626' 
+                        : testCase.severity?.toLowerCase() === 'low'
+                          ? '#6b7280'
+                          : '#2563eb'}
+                    >
                       {testCase.severity}
-                    </Badge>
+                    </div>
                   </TableCell>
                   <TableCell>
-                    <Badge variant="outline" className="text-xs">
-                      {testCase.persona}
+                    <Badge variant="outline" className="text-xs whitespace-nowrap">
+                      {testCase.persona || 'Other'}
                     </Badge>
                   </TableCell>
-                  <TableCell className="max-w-xs">
+                  <TableCell className="max-w-32">
                     <div className="text-xs text-muted-foreground" data-testid={`text-steps-${testCase.id}`}>
                       {testCase.steps && Array.isArray(testCase.steps) && testCase.steps.length > 0 
-                        ? `${testCase.steps.length} steps: ${testCase.steps[0].substring(0, 50)}${testCase.steps[0].length > 50 ? '...' : ''}`
+                        ? `${testCase.steps.length} steps: ${testCase.steps[0].substring(0, 30)}${testCase.steps[0].length > 30 ? '...' : ''}`
                         : 'No steps defined'
                       }
                     </div>
                   </TableCell>
-                  <TableCell className="text-sm">
-                    {testCase.customerName}
+                  <TableCell className="max-w-32">
+                    <div className="text-sm truncate">{testCase.customerName}</div>
                   </TableCell>
-                  <TableCell className="text-sm">
-                    <div className="flex items-center space-x-1">
-                      <FileText className="h-3 w-3" />
-                      <span>{testCase.documentName}</span>
+                  <TableCell className="max-w-40">
+                    <div className="text-sm text-muted-foreground truncate" title={testCase.documentName}>
+                      {testCase.documentName}
                     </div>
                   </TableCell>
                   <TableCell>
-                    <div className="flex items-center space-x-2">
-                      {getStatusIcon(testCase.executionStatus)}
-                      {getStatusBadge(testCase.executionStatus)}
-                    </div>
+                    <Badge 
+                      variant={testCase.executionStatus === 'complete' ? 'default' : testCase.executionStatus === 'in_progress' ? 'secondary' : 'outline'} 
+                      className="text-xs capitalize whitespace-nowrap"
+                    >
+                      {testCase.executionStatus.replace('_', ' ')}
+                    </Badge>
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center space-x-2">
@@ -736,6 +806,7 @@ export default function TestCaseManager() {
               ))}
             </TableBody>
           </Table>
+          </div>
         </CardContent>
       </Card>
     </div>
