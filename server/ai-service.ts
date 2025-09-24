@@ -294,6 +294,8 @@ export interface TestCaseGenerationResult {
     description: string;
     category: string;
     priority: string;
+    severity: string;
+    persona: string;
     steps: string[];
     expectedResult: string;
     tags: string[];
