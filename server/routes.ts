@@ -1493,6 +1493,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             tags: testCase.tags || [],
             category: testCase.category,
             priority: testCase.priority,
+            severity: testCase.severity || 'medium',
+            persona: testCase.persona || 'Other',
             source: 'ai_generated',
             documentId
           });
