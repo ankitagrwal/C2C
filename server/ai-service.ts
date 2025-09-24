@@ -380,12 +380,12 @@ Generate test cases covering these edge case categories:
 8. INTEGRATION FAILURES: External service failures, API timeouts, data format mismatches
 
 ENHANCED GUIDELINES:
-1. Generate 80-100 diverse test cases with at least 30% focused on edge cases
-2. Categories (target distribution):
-   - functional: 40% - Core business logic and standard workflows
-   - edge_case: 30% - Boundary conditions, error scenarios, and failure modes
-   - compliance: 20% - Regulatory requirements, security, and policy adherence
-   - integration: 10% - System interactions, data flow, and external dependencies
+1. Generate exactly 20 diverse test cases with at least 30% focused on edge cases (DEMO MODE - reduced for reliability)
+2. Categories (target distribution for 20 test cases):
+   - functional: 40% (~8 cases) - Core business logic and standard workflows
+   - edge_case: 30% (~6 cases) - Boundary conditions, error scenarios, and failure modes
+   - compliance: 20% (~4 cases) - Regulatory requirements, security, and policy adherence
+   - integration: 10% (~2 cases) - System interactions, data flow, and external dependencies
 3. Priority assignment:
    - high: Critical business functions, security risks, compliance requirements
    - medium: Important features, data integrity, user experience
