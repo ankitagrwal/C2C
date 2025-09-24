@@ -128,7 +128,7 @@ function smartJsonRepair(jsonStr: string): string | null {
 }
 
 // Gemini API function for test case generation (NEW SDK format) with timeout protection
-async function generateTestCasesWithGemini(systemPrompt: string, userPrompt: string) {
+async function generateTestCasesWithGemini(systemPrompt: string, userPrompt: string, modelVersion: string = "gemini-2.5-flash") {
   if (!geminiClient) {
     throw new Error("Gemini client not initialized");
   }
@@ -164,7 +164,7 @@ async function generateTestCasesWithGemini(systemPrompt: string, userPrompt: str
   }
 
   try {
-    console.log("🔄 Making API call to Gemini 2.0 Flash...");
+    console.log(`🔄 Making API call to ${modelVersion}...`);
     
     const startTime = Date.now();
 
@@ -178,12 +178,12 @@ async function generateTestCasesWithGemini(systemPrompt: string, userPrompt: str
 
     console.log("📡 About to call geminiClient.getGenerativeModel() and model.generateContent()...");
     console.log("📡 Request config:", {
-      model: "gemini-2.0-flash",
+      model: modelVersion,
       contentLength: (systemPrompt + "\n\n" + userPrompt).length
     });
 
     // Use CORRECT Google GenAI SDK format 
-    const model = geminiClient.getGenerativeModel({ model: "gemini-2.0-flash" });
+    const model = geminiClient.getGenerativeModel({ model: modelVersion });
     const result = await model.generateContent(systemPrompt + "\n\n" + userPrompt);
 
     clearTimeout(timeoutId);
@@ -208,7 +208,7 @@ async function generateTestCasesWithGemini(systemPrompt: string, userPrompt: str
       
       const debugData = {
         timestamp: new Date().toISOString(),
-        model: "gemini-2.0-flash",
+        model: modelVersion,
         contentLength: content.length,
         rawResponse: content,
         fullGeminiResponse: {
@@ -438,7 +438,7 @@ Generate test cases that thoroughly validate the requirements, processes, potent
       console.log("🧠 Gemini Flash is my primary AI brain! Let me generate those test cases...");
       try {
         console.log("🌟 Gemini AI is processing your document...");
-        const geminiResult = await generateTestCasesWithGemini(systemPrompt, userPrompt);
+        const geminiResult = await generateTestCasesWithGemini(systemPrompt, userPrompt, config.model || "gemini-2.5-flash");
         
         content = geminiResult.content;
         console.log("✅ Gemini successfully generated test cases!");
