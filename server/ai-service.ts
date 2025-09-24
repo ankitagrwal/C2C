@@ -3,6 +3,8 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import mammoth from "mammoth";
 import { parse } from "node-html-parser";
 import crypto from "crypto";
+import fs from "fs";
+import path from "path";
 
 // Initialize Gemini client
 const geminiClient = process.env.GEMINI_API_KEY
@@ -153,6 +155,30 @@ async function generateTestCasesWithGemini(systemPrompt: string, userPrompt: str
     }
 
     const content = response.text().trim();
+    
+    // 📁 DUMP RAW GEMINI RESPONSE TO test_files FOR DEBUGGING
+    try {
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const fileName = `gemini-response-${timestamp}.json`;
+      const filePath = path.join('test_files', fileName);
+      
+      const debugData = {
+        timestamp: new Date().toISOString(),
+        model: "gemini-2.5-flash",
+        contentLength: content.length,
+        rawResponse: content,
+        fullGeminiResponse: {
+          text: content,
+          usageMetadata: result.response.usageMetadata || null,
+          candidates: result.response.candidates || null
+        }
+      };
+      
+      fs.writeFileSync(filePath, JSON.stringify(debugData, null, 2));
+      console.log(`📁 Raw Gemini response dumped to: ${filePath}`);
+    } catch (dumpError) {
+      console.log(`⚠️ Failed to dump response: ${dumpError}`);
+    }
     
     if (!content || content.length < 50) {
       throw new Error(`Gemini response too short: ${content.length} characters`);
