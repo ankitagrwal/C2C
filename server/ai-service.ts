@@ -120,7 +120,7 @@ async function generateTestCasesWithGemini(systemPrompt: string, userPrompt: str
   }
 
   try {
-    console.log("🔄 Making API call to Gemini 2.5 Flash...");
+    console.log("🔄 Making API call to Gemini 2.0 Flash...");
     
     const startTime = Date.now();
 
@@ -134,12 +134,12 @@ async function generateTestCasesWithGemini(systemPrompt: string, userPrompt: str
 
     console.log("📡 About to call geminiClient.getGenerativeModel() and model.generateContent()...");
     console.log("📡 Request config:", {
-      model: "gemini-2.5-flash",
+      model: "gemini-2.0-flash",
       contentLength: (systemPrompt + "\n\n" + userPrompt).length
     });
 
     // Use CORRECT Google GenAI SDK format 
-    const model = geminiClient.getGenerativeModel({ model: "gemini-2.5-flash" });
+    const model = geminiClient.getGenerativeModel({ model: "gemini-2.0-flash" });
     const result = await model.generateContent(systemPrompt + "\n\n" + userPrompt);
 
     clearTimeout(timeoutId);
@@ -164,7 +164,7 @@ async function generateTestCasesWithGemini(systemPrompt: string, userPrompt: str
       
       const debugData = {
         timestamp: new Date().toISOString(),
-        model: "gemini-2.5-flash",
+        model: "gemini-2.0-flash",
         contentLength: content.length,
         rawResponse: content,
         fullGeminiResponse: {
@@ -188,7 +188,7 @@ async function generateTestCasesWithGemini(systemPrompt: string, userPrompt: str
     
     return {
       content,
-      model: "gemini-2.5-flash",
+      model: "gemini-2.0-flash",
       usage: result.response.usageMetadata || { inputTokens: 0, outputTokens: 0, totalTokens: 0 }
     };
 
