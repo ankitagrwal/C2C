@@ -532,8 +532,21 @@ function chunkDocument(text: string): string[] {
 }
 
 async function generateEmbeddings(textChunks: string[]): Promise<number[][]> {
-  // Mock embeddings for now
-  return textChunks.map(() => Array(1536).fill(0).map(() => Math.random()));
+  // TEMPORARY: Use mock embeddings for demo reliability due to Gemini API connectivity issues
+  // TODO: Fix Gemini connectivity and implement proper embedding generation after demo
+  console.log(`🔢 [DEMO MODE] Generating mock embeddings for ${textChunks.length} text chunks...`);
+  console.log(`⚠️ Using mock embeddings temporarily due to network connectivity issues with Gemini API`);
+  
+  const embeddings = textChunks.map((chunk, index) => {
+    console.log(`🔢 [MOCK] Generated embedding for chunk ${index + 1}: 1536 dimensions`);
+    // Generate deterministic mock embeddings based on chunk content for consistency
+    const seed = chunk.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    const random = () => (Math.sin(seed * 1.5) + 1) / 2; // Deterministic "random" based on content
+    return Array(1536).fill(0).map((_, i) => (Math.sin(seed + i) * 0.1));
+  });
+  
+  console.log(`✅ [DEMO MODE] All ${embeddings.length} mock embeddings generated successfully!`);
+  return embeddings;
 }
 
 async function extractTextFromFile(buffer: Buffer, filename: string): Promise<string> {
