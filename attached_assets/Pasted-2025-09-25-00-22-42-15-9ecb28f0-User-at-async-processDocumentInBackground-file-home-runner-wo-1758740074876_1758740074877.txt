@@ -1,0 +1,160 @@
+2025-09-25 00:22:42.15
+9ecb28f0
+User
+at async processDocumentInBackground (file:///home/runner/workspace/dist/index.js:2228:24)
+2025-09-25 00:22:42.15
+9ecb28f0
+User
+🔧 Content length: 35128
+2025-09-25 00:22:42.15
+9ecb28f0
+User
+❌ Gemini agent failed: Error: Gemini JSON could not be repaired
+2025-09-25 00:22:42.15
+9ecb28f0
+User
+at generateTestCases (file:///home/runner/workspace/dist/index.js:740:19)
+2025-09-25 00:22:42.15
+9ecb28f0
+User
+at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+2025-09-25 00:22:42.15
+9ecb28f0
+User
+at async processDocumentForTestGeneration (file:///home/runner/workspace/dist/index.js:868:24)
+2025-09-25 00:22:42.15
+9ecb28f0
+User
+at async processDocumentInBackground (file:///home/runner/workspace/dist/index.js:2228:24)
+2025-09-25 00:22:42.15
+9ecb28f0
+User
+Error generating test cases: Error: Failed to generate test cases: Gemini JSON could not be repaired
+2025-09-25 00:22:42.15
+9ecb28f0
+User
+at generateTestCases (file:///home/runner/workspace/dist/index.js:747:15)
+2025-09-25 00:22:42.15
+9ecb28f0
+User
+at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+2025-09-25 00:22:42.15
+9ecb28f0
+User
+at async processDocumentForTestGeneration (file:///home/runner/workspace/dist/index.js:868:24)
+2025-09-25 00:22:42.15
+9ecb28f0
+User
+at async processDocumentInBackground (file:///home/runner/workspace/dist/index.js:2228:24)
+2025-09-25 00:22:42.15
+9ecb28f0
+User
+🔧 JSON repair completed, checking validity...
+2025-09-25 00:22:42.15
+9ecb28f0
+User
+⚠️ Smart repair couldn't fix all issues
+2025-09-25 00:22:42.15
+9ecb28f0
+User
+⚠️ Repair error: SyntaxError: Unexpected token '`', "```json
+2025-09-25 00:22:42.15
+9ecb28f0
+User
+{
+2025-09-25 00:22:42.15
+9ecb28f0
+User
+"... is not valid JSON
+2025-09-25 00:22:42.15
+9ecb28f0
+User
+at JSON.parse (<anonymous>)
+2025-09-25 00:22:42.15
+9ecb28f0
+User
+at smartJsonRepair (file:///home/runner/workspace/dist/index.js:489:12)
+2025-09-25 00:22:42.15
+9ecb28f0
+User
+at generateTestCases (file:///home/runner/workspace/dist/index.js:738:35)
+2025-09-25 00:22:42.15
+9ecb28f0
+User
+at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+2025-09-25 00:22:42.15
+9ecb28f0
+User
+at async processDocumentForTestGeneration (file:///home/runner/workspace/dist/index.js:868:24)
+2025-09-25 00:22:42.15
+9ecb28f0
+User
+at async processDocumentInBackground (file:///home/runner/workspace/dist/index.js:2228:24)
+2025-09-25 00:22:42.15
+9ecb28f0
+User
+⚠️ Repaired content sample: ```json
+2025-09-25 00:22:42.15
+9ecb28f0
+User
+{
+2025-09-25 00:22:42.15
+9ecb28f0
+User
+"testCases": [
+2025-09-25 00:22:42.15
+9ecb28f0
+User
+{
+2025-09-25 00:22:42.15
+9ecb28f0
+User
+"title": "Verify Accurate Time Record Submission - Valid Entry",
+2025-09-25 00:22:42.15
+9ecb28f0
+User
+"description": "Test that an employee can successfully record their time at the start and end of the workday and for meal periods.",
+2025-09-25 00:22:42.15
+9ecb28f0
+User
+"category": "functional",
+2025-09-25 00:22:42.15
+9ecb28f0
+User
+"priority": "high",
+2025-09-25 00:22:42.15
+9ecb28f0
+User
+Error processing document: Error: Failed to generate test cases: Failed to generate test cases: Gemini JSON could not be repaired
+2025-09-25 00:22:42.15
+9ecb28f0
+User
+at generateTestCases (file:///home/runner/workspace/dist/index.js:777:11)
+2025-09-25 00:22:42.15
+9ecb28f0
+User
+at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+2025-09-25 00:22:42.15
+9ecb28f0
+User
+at async processDocumentForTestGeneration (file:///home/runner/workspace/dist/index.js:868:24)
+2025-09-25 00:22:42.15
+9ecb28f0
+User
+at async processDocumentInBackground (file:///home/runner/workspace/dist/index.js:2228:24)
+2025-09-25 00:22:42.15
+9ecb28f0
+User
+Background processing failed for job 5a45812a-e7de-4e84-8534-f7c5f249cfdc: Error: Failed to process document: Failed to generate test cases: Failed to generate test cases: Gemini JSON could not be repaired
+2025-09-25 00:22:42.15
+9ecb28f0
+User
+at processDocumentForTestGeneration (file:///home/runner/workspace/dist/index.js:882:11)
+2025-09-25 00:22:42.15
+9ecb28f0
+User
+at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+2025-09-25 00:22:42.15
+9ecb28f0
+User
+at async processDocumentInBackground (file:///home/runner/workspace/dist/index.js:2228:24)

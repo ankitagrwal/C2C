@@ -17,26 +17,34 @@ function stripMarkdownCodeFences(content: string): string {
   // Remove ```json...``` or ```...``` wrappers that Gemini often adds
   let cleaned = content.trim();
   
-  // Pattern 1: ```json\n{...}\n```
-  if (cleaned.startsWith('```json\n') && cleaned.endsWith('\n```')) {
-    cleaned = cleaned.slice(8, -4); // Remove ```json\n and \n```
+  // More robust pattern matching using regex
+  // Pattern 1: ```json (with any whitespace) {...} (with any whitespace) ```
+  const jsonCodeBlockRegex = /^```json\s*([\s\S]*?)\s*```$/;
+  const match1 = cleaned.match(jsonCodeBlockRegex);
+  if (match1) {
+    cleaned = match1[1].trim();
+    return cleaned;
   }
-  // Pattern 2: ```\n{...}\n```
-  else if (cleaned.startsWith('```\n') && cleaned.endsWith('\n```')) {
-    cleaned = cleaned.slice(4, -4); // Remove ```\n and \n```
+  
+  // Pattern 2: ``` (with any whitespace) {...} (with any whitespace) ```
+  const codeBlockRegex = /^```\s*([\s\S]*?)\s*```$/;
+  const match2 = cleaned.match(codeBlockRegex);
+  if (match2) {
+    cleaned = match2[1].trim();
+    return cleaned;
   }
-  // Pattern 3: ```json{...}```
-  else if (cleaned.startsWith('```json') && cleaned.endsWith('```')) {
-    const jsonStart = cleaned.indexOf('{');
-    if (jsonStart !== -1) {
-      cleaned = cleaned.slice(jsonStart, -3); // Remove ```json prefix and ``` suffix
-    }
-  }
-  // Pattern 4: ```{...}```
-  else if (cleaned.startsWith('```') && cleaned.endsWith('```')) {
-    const jsonStart = cleaned.indexOf('{');
-    if (jsonStart !== -1) {
-      cleaned = cleaned.slice(jsonStart, -3); // Remove ``` prefix and ``` suffix
+  
+  // Fallback: try to extract JSON from anywhere in the response
+  // Look for the first { and last } to extract just the JSON part
+  const firstBrace = cleaned.indexOf('{');
+  const lastBrace = cleaned.lastIndexOf('}');
+  
+  if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+    const jsonPart = cleaned.slice(firstBrace, lastBrace + 1);
+    // Quick validation - make sure it looks like JSON
+    if (jsonPart.includes('"testCases"') || jsonPart.includes('"title"')) {
+      console.log("🔧 Extracted JSON from mixed content");
+      return jsonPart.trim();
     }
   }
   
