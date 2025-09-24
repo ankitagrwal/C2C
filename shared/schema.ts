@@ -77,6 +77,8 @@ export const testCases = pgTable("test_cases", {
   tags: jsonb("tags"), // Tags as JSON array
   category: text("category"), // 'Functional', 'Compliance', 'Edge Cases', 'Integration'
   priority: text("priority").default("medium"), // 'low', 'medium', 'high' for wizard
+  severity: text("severity").default("medium"), // 'Low', 'Medium', 'High'
+  persona: text("persona").default("Other"), // 'Hourly Employee', 'HR Admin', 'Salaried Employee', 'System Admin', 'Payroll Admin', 'Hourly Manager', 'Salaried Manager', 'Other'
   source: text("source").default("generated"), // 'generated', 'uploaded', 'manual'
   confidenceScore: real("confidence_score"),
   contextUsed: text("context_used"), // RAG context that was used
