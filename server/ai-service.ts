@@ -367,7 +367,7 @@ Generate test cases covering these edge case categories:
 8. INTEGRATION FAILURES: External service failures, API timeouts, data format mismatches
 
 ENHANCED GUIDELINES:
-1. Generate 10-15 diverse test cases with at least 30% focused on edge cases
+1. Generate 80-100 diverse test cases with at least 30% focused on edge cases
 2. Categories (target distribution):
    - functional: 40% - Core business logic and standard workflows
    - edge_case: 30% - Boundary conditions, error scenarios, and failure modes
@@ -388,13 +388,14 @@ ${context}
 
 MANDATORY REQUIREMENTS:
 1. Create detailed, executable test steps for each scenario (EXACTLY 5-10 steps per test case - NO FEWER than 5 steps)
-2. Include at least 4-5 edge case test scenarios covering boundary conditions, invalid inputs, error handling, and system failures
-3. EVERY step must include specific actions, exact data inputs, field names, and verification points
-4. Focus heavily on realistic failure scenarios that could impact business operations
-5. Cover both happy path workflows and comprehensive error/edge case scenarios
-6. Include security vulnerabilities, compliance violations, and integration failure testing
-7. Use specific test data values in steps (e.g., "Enter '999999999999999' in Credit Card Number field" not "Enter invalid credit card")
-8. Include expected error messages, system responses, and intermediate states
+2. Generate approximately 80-100 comprehensive test scenarios covering all aspects of the document
+3. Include at least 25-30 edge case test scenarios covering boundary conditions, invalid inputs, error handling, and system failures
+4. EVERY step must include specific actions, exact data inputs, field names, and verification points
+5. Focus heavily on realistic failure scenarios that could impact business operations
+6. Cover both happy path workflows and comprehensive error/edge case scenarios
+7. Include security vulnerabilities, compliance violations, and integration failure testing
+8. Use specific test data values in steps (e.g., "Enter '999999999999999' in Credit Card Number field" not "Enter invalid credit card")
+9. Include expected error messages, system responses, and intermediate states
 
 Generate test cases that thoroughly validate the requirements, processes, potential failure scenarios, boundary conditions, and error handling capabilities described in this document.`;
 
