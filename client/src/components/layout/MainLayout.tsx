@@ -34,7 +34,7 @@ export default function MainLayout({ children, user, onLogout }: MainLayoutProps
       <div className="flex h-screen w-full">
         <AppSidebar user={user} onLogout={onLogout} />
         <div className="flex flex-col flex-1">
-          <header className="flex items-center justify-between p-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+          <header className="sticky top-0 z-50 flex items-center justify-between p-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
             <div className="flex items-center space-x-4">
               <SidebarTrigger data-testid="button-sidebar-toggle" />
               <div className="text-sm text-muted-foreground">
