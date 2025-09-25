@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { CheckCircle, AlertCircle, Search, Filter, User, Building2, FileText, Clock, CheckSquare, Square, ChevronDown, Send } from 'lucide-react';
+import { CheckCircle, AlertCircle, Search, Filter, User, Building2, FileText, Clock, CheckSquare, Square, ChevronDown, Send, Eye, Edit2, Save, X } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -12,6 +12,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuCheckboxItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -87,6 +88,8 @@ export default function ReviewSubmitStep({
   const [sourceFilters, setSourceFilters] = useState<Set<string>>(new Set());
   const [itemsPerPage, setItemsPerPage] = useState(50);
   const [currentPage, setCurrentPage] = useState(1);
+  const [editingTestCaseId, setEditingTestCaseId] = useState<string | null>(null);
+  const [editedTestCase, setEditedTestCase] = useState<Partial<TestCase>>({});
   // Removed solutionId availability checking - IDs are created externally
   const { toast } = useToast();
   const [, setLocation] = useLocation();
@@ -283,6 +286,33 @@ export default function ReviewSubmitStep({
       newSelected.add(testCaseId);
     }
     setSelectedTestCases(newSelected);
+  };
+
+  const startEditing = (testCase: TestCase) => {
+    setEditingTestCaseId(testCase.id);
+    setEditedTestCase({
+      title: testCase.title,
+      category: testCase.category,
+      priority: testCase.priority,
+      severity: testCase.severity,
+      persona: testCase.persona
+    });
+  };
+
+  const saveEditedTestCase = () => {
+    // For demo purposes, just close edit mode
+    // In full implementation, this would update the backend
+    toast({
+      title: "Test case updated",
+      description: "Changes saved successfully (demo mode)",
+    });
+    setEditingTestCaseId(null);
+    setEditedTestCase({});
+  };
+
+  const cancelEditing = () => {
+    setEditingTestCaseId(null);
+    setEditedTestCase({});
   };
 
   // Removed customer lookup by solution ID - no checking needed
@@ -637,15 +667,18 @@ export default function ReviewSubmitStep({
                 <TableHead className="min-w-[200px] max-w-[250px]">Title</TableHead>
                 <TableHead className="w-[120px] text-center">Category</TableHead>
                 <TableHead className="w-[100px] text-center">Priority</TableHead>
+                <TableHead className="w-[100px] text-center">Severity</TableHead>
+                <TableHead className="w-[120px] text-center">Persona</TableHead>
                 <TableHead className="w-[100px] text-center">Source</TableHead>
                 <TableHead className="min-w-[200px] max-w-[300px]">Description</TableHead>
-                <TableHead className="min-w-[200px] max-w-[300px]">Test Steps</TableHead>
+                <TableHead className="min-w-[150px] text-center">Test Steps</TableHead>
+                <TableHead className="w-[100px] text-center">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {paginatedTestCases.length === 0 ? (
                 <TableRow data-testid="table-row-empty">
-                  <TableCell colSpan={7} className="h-32 text-center">
+                  <TableCell colSpan={10} className="h-32 text-center">
                     <div className="flex flex-col items-center justify-center space-y-2 text-muted-foreground">
                       <FileText className="h-8 w-8" />
                       <p className="text-sm font-medium">No test cases available</p>
@@ -664,14 +697,40 @@ export default function ReviewSubmitStep({
                     />
                   </TableCell>
                   <TableCell className="font-medium min-w-[200px] max-w-[250px]">
-                    <div className="break-words hyphens-auto" title={testCase.title}>
-                      {testCase.title}
-                    </div>
+                    {editingTestCaseId === testCase.id ? (
+                      <Input
+                        value={editedTestCase.title || testCase.title}
+                        onChange={(e) => setEditedTestCase({...editedTestCase, title: e.target.value})}
+                        className="text-sm"
+                      />
+                    ) : (
+                      <div className="break-words hyphens-auto" title={testCase.title}>
+                        {testCase.title}
+                      </div>
+                    )}
                   </TableCell>
                   <TableCell className="text-center">
-                    <Badge variant="outline" className="text-xs whitespace-nowrap">
-                      {testCase.category || 'Manual'}
-                    </Badge>
+                    {editingTestCaseId === testCase.id ? (
+                      <Select
+                        value={editedTestCase.category || testCase.category || 'Manual'}
+                        onValueChange={(value) => setEditedTestCase({...editedTestCase, category: value})}
+                      >
+                        <SelectTrigger className="w-full text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {TEST_CASE_CATEGORIES.map(category => (
+                            <SelectItem key={category} value={category}>
+                              {category}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <Badge variant="outline" className="text-xs whitespace-nowrap">
+                        {testCase.category || 'Manual'}
+                      </Badge>
+                    )}
                   </TableCell>
                   <TableCell className="text-center">
                     <Badge
@@ -683,6 +742,23 @@ export default function ReviewSubmitStep({
                       className="text-xs whitespace-nowrap"
                     >
                       {(testCase.priority || 'medium').charAt(0).toUpperCase() + (testCase.priority || 'medium').slice(1)}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <Badge
+                      variant={
+                        testCase.severity === 'High' ? 'destructive' :
+                        testCase.severity === 'Medium' ? 'secondary' :
+                        'outline'
+                      }
+                      className="text-xs whitespace-nowrap"
+                    >
+                      {testCase.severity || 'Medium'}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <Badge variant="outline" className="text-xs whitespace-nowrap">
+                      {testCase.persona || 'Other'}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-center">
@@ -699,10 +775,49 @@ export default function ReviewSubmitStep({
                       {testCase.parsedDescription}
                     </div>
                   </TableCell>
-                  <TableCell className="min-w-[200px] max-w-[300px] align-top" data-testid={`text-steps-${testCase.id}`}>
-                    <div className="text-sm text-muted-foreground break-words hyphens-auto leading-relaxed whitespace-pre-wrap" title={testCase.parsedSteps}>
-                      {testCase.parsedSteps}
-                    </div>
+                  <TableCell className="text-center" data-testid={`text-steps-${testCase.id}`}>
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-2xl">
+                        <DialogHeader>
+                          <DialogTitle>Test Steps</DialogTitle>
+                          <DialogDescription>
+                            {testCase.title}
+                          </DialogDescription>
+                        </DialogHeader>
+                        <div className="max-h-96 overflow-y-auto">
+                          <div className="text-sm whitespace-pre-wrap p-4 bg-muted rounded-md">
+                            {testCase.parsedSteps || 'No steps defined'}
+                          </div>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+                  </TableCell>
+                  <TableCell className="text-center">
+                    {editingTestCaseId === testCase.id ? (
+                      <div className="flex space-x-1">
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0" title="Save changes" onClick={saveEditedTestCase}>
+                          <Save className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0" title="Cancel editing" onClick={cancelEditing}>
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="h-8 w-8 p-0" 
+                        title="Edit test case"
+                        onClick={() => startEditing(testCase)}
+                      >
+                        <Edit2 className="h-4 w-4" />
+                      </Button>
+                    )}
                   </TableCell>
                 </TableRow>
                 ))
