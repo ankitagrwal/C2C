@@ -33,7 +33,7 @@ export default function MainLayout({ children, user, onLogout }: MainLayoutProps
     <SidebarProvider style={style as React.CSSProperties}>
       <div className="flex h-screen w-full">
         <AppSidebar user={user} onLogout={onLogout} />
-        <div className="flex flex-col flex-1">
+        <div className="flex flex-col flex-1 min-h-0">
           <header className="sticky top-0 z-50 flex items-center justify-between p-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
             <div className="flex items-center space-x-4">
               <SidebarTrigger data-testid="button-sidebar-toggle" />
@@ -56,7 +56,7 @@ export default function MainLayout({ children, user, onLogout }: MainLayoutProps
               )}
             </div>
           </header>
-          <main className="flex-1 overflow-auto p-6">
+          <main className="flex-1 p-6">
             {children}
           </main>
         </div>

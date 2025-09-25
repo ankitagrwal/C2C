@@ -652,7 +652,6 @@ export default function ReviewSubmitStep({
           </div>
         </CardHeader>
         <CardContent>
-          <div className="w-full overflow-x-auto">
           <Table data-testid="review-submit-table" className="w-full min-w-[1200px]">
             <TableHeader>
               <TableRow>
@@ -824,7 +823,6 @@ export default function ReviewSubmitStep({
               )}
             </TableBody>
           </Table>
-          </div>
 
           {/* Pagination */}
           {totalPages > 1 && (
