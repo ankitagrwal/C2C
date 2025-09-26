@@ -380,12 +380,12 @@ Generate test cases covering these edge case categories:
 8. INTEGRATION FAILURES: External service failures, API timeouts, data format mismatches
 
 ENHANCED GUIDELINES:
-1. Generate exactly 20 diverse test cases with at least 30% focused on edge cases (DEMO MODE - reduced for reliability)
-2. Categories (target distribution for 20 test cases):
-   - functional: 40% (~8 cases) - Core business logic and standard workflows
-   - edge_case: 30% (~6 cases) - Boundary conditions, error scenarios, and failure modes
-   - compliance: 20% (~4 cases) - Regulatory requirements, security, and policy adherence
-   - integration: 10% (~2 cases) - System interactions, data flow, and external dependencies
+1. Generate exactly 15 diverse test cases with at least 30% focused on edge cases (DEMO MODE - reduced for reliability)
+2. Categories (target distribution for 15 test cases):
+   - functional: 40% (~6 cases) - Core business logic and standard workflows
+   - edge_case: 30% (~5 cases) - Boundary conditions, error scenarios, and failure modes
+   - compliance: 20% (~3 cases) - Regulatory requirements, security, and policy adherence
+   - integration: 10% (~1 case) - System interactions, data flow, and external dependencies
 3. Priority assignment:
    - high: Critical business functions, security risks, compliance requirements
    - medium: Important features, data integrity, user experience
@@ -416,8 +416,8 @@ ${context}
 
 MANDATORY REQUIREMENTS:
 1. Create detailed, executable test steps for each scenario (EXACTLY 5-10 steps per test case - NO FEWER than 5 steps)
-2. Generate approximately 80-100 comprehensive test scenarios covering all aspects of the document
-3. Include at least 25-30 edge case test scenarios covering boundary conditions, invalid inputs, error handling, and system failures
+2. Generate exactly 15 comprehensive test scenarios covering all aspects of the document
+3. Include at least 5 edge case test scenarios covering boundary conditions, invalid inputs, error handling, and system failures
 4. EVERY step must include specific actions, exact data inputs, field names, and verification points
 5. Focus heavily on realistic failure scenarios that could impact business operations
 6. Cover both happy path workflows and comprehensive error/edge case scenarios
