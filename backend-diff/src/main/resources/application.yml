@@ -1,0 +1,62 @@
+spring:
+  application:
+    name: clause2case-backend
+  
+  datasource:
+    url: ${DATABASE_URL}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      connection-timeout: 30000
+  
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+        jdbc:
+          batch_size: 20
+        order_inserts: true
+        order_updates: true
+  
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 50MB
+      max-request-size: 50MB
+  
+  security:
+    user:
+      name: admin
+      password: password
+
+server:
+  port: 8080
+  error:
+    include-message: always
+    include-binding-errors: always
+
+# AI API Configuration
+ai:
+  gemini:
+    api-key: ${GEMINI_API_KEY}
+    api-url: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent
+    model: gemini-2.0-flash-exp
+  openai:
+    api-key: ${OPENAI_API_KEY:}
+    api-url: https://api.openai.com/v1
+    embedding-model: text-embedding-ada-002
+
+# Application Configuration
+app:
+  test-cases:
+    default-count: 15
+  document:
+    chunk-size: 800
+    chunk-overlap: 100
+  rag:
+    context-limit: 5
